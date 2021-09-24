@@ -1,2 +1,2 @@
-# shoe-store
+# shoe-store-api
 shoe's store
