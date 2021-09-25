@@ -13,7 +13,7 @@ const service ={
         });
     },
 
-    sendConfirmationEmail : (transport,senderEmail,receiverName, receiverEmail, confirmationCode) => {
+    sendConfirmationEmail : (transport,senderEmail,receiverName, receiverEmail,confirmationCode) => {
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
@@ -27,7 +27,7 @@ const service ={
         });
     },
 
-    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,email ,resetCode) => {
+    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,emailCrypt ,resetCode) => {
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
@@ -36,7 +36,7 @@ const service ={
                 <h1>Password reset</h1>
                 <h2>Hello ${receiverName}</h2>
                 <p>You can reset your password.</p>
-                <p><a href=http://localhost:3800/api/confirm/${email}/${resetCode}>here</a></p>
+                <p><a href=http://localhost:3800/api/reset/${emailCrypt}/${resetCode}>here</a></p>
             `
         });
     }

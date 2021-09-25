@@ -30,6 +30,10 @@ const sendConfirmationEmail = (transport,senderEmail,receiverName, receiverEmail
     emailService.sendConfirmationEmail(transport, senderEmail,receiverName, receiverEmail, confirmationCode);
 };
 
+const sendResetEmail = (transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode) => {
+    emailService.sendResetEmail(transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode);
+};
+
 const g_f_createCode = () => {
     const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let confirmationCode = '';
@@ -170,26 +174,41 @@ function loginUser(req, res){
 }
 
 function recoverPassword(req,res){
+    const roundHash = 10; //must be same on PasswordResetGet
     let userEmail = req.body.email;
     let recoverPassword = new RecoverPassword();
+    
+    //save recover password on DB and send email
     const setRecoverPassword = (res,recoverPassword, recoverUser) => {
         
-        recoverPassword.user = recoverUser;
-        recoverPassword.recoverCode = g_f_createCode();
+        recoverPassword.user = recoverUser._id;
 
+        recoverPassword.recoverCode = g_f_createCode();
+        resetCode = recoverPassword.recoverCode;
+
+        
         recoverPassword.save((err,recoverPasswordStored) => {
             if(err) {
                 
                 return messageError(res,500,'Request error');
             }
-            if(recoverPasswordStored) return res.status(200).send({recoverPasswordStored});
+            if(recoverPasswordStored) {
+                bcrypt.hash(recoverUser.email, roundHash, (err, hash) => {
+                    hash = hash.replace(/\//g, "aSimpleSlash").replace(/\$/g,"aSimpleDolar").replace(/\./g,"aSimpleDot");
+                    sendResetEmail(transport,hiddenUser,recoverUser.name,recoverUser.email,hash,resetCode);
+
+                    return res.status(200).send({recoverPasswordStored});
+                });
+            }
         });
+        
     };
+
     const newRecover = () => User.findOne({'email':userEmail}).exec((err,user) => {
         
         if(err) return messageError (res,500,'Request error');
         if(user) {                    
-            setRecoverPassword(res,recoverPassword,user._id);
+            setRecoverPassword(res,recoverPassword,user);
         }else{
             return messageError(res,300,'If you have any account the email was sended')
         }
@@ -200,12 +219,12 @@ function recoverPassword(req,res){
         if(recoversPassword){
             let recoverUserExists = false;
             let recoverId = '';
-            let recoverUserId = '';
+            let recoverUser = new User();
             recoversPassword.forEach(element => {
                 if(element.user.email == userEmail){
                     recoverUserExists = true;
                     recoverId = element._id;
-                    recoverUserId = element.user._id;
+                    recoverUser = element.user;
                 }
             });
             if(recoverUserExists){
@@ -213,7 +232,7 @@ function recoverPassword(req,res){
                     if(err) {
                         return messageError(res,500,'Request error');
                     }
-                    if(removed) setRecoverPassword(res,recoverPassword,recoverUserId);
+                    if(removed) setRecoverPassword(res,recoverPassword,recoverUser);
                 });
             }else{
             
@@ -226,6 +245,26 @@ function recoverPassword(req,res){
     
 
     });
+}
+
+function getUserResetCode(req,res){
+    var emailCrypted = req.params.emailCrypt;
+    var resetCode = req.params.resetCode;
+
+    RecoverPassword.findOne({'resetCode':resetCode},(err,recoverPassword) => {
+        if(err) return messageError(res,500,'Server Error');
+        if(recoverPassword){
+            return res.status(200).send({
+                emailCrypted,
+                resetCode
+            });
+        }else{
+            return messageError(res,500,'The recovery code may have expired');
+        }
+        
+    });
+    
+
 }
 
 function getUser(req,res){
@@ -299,6 +338,7 @@ module.exports = {
     verifyUser,
     loginUser,
     recoverPassword,
+    getUserResetCode,
     getUser,
     getUsers
 }
