@@ -35,8 +35,9 @@ const service ={
             html: `
                 <h1>Password reset</h1>
                 <h2>Hello ${receiverName}</h2>
-                <p>You can reset your password.</p>
-                <p><a href=http://localhost:3800/api/reset/${emailCrypt}/${resetCode}>here</a></p>
+                <p>You can reset your password with the code:</p>
+                <p>${resetCode}</p>
+                <p>The code expires in 2 minutes</p>
             `
         });
     }

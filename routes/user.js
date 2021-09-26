@@ -7,8 +7,8 @@ var md_auth = require('../middlewares/authenticated');
 
 api.post('/register', UserController.saveUser);
 api.post('/login', UserController.loginUser);
-api.post('/recover', UserController.recoverPassword);
-api.get('/reset/:emailCrypt/:resetCode', UserController.getUserResetCode);
+api.post('/recover', UserController.recoverPasswordEmail);
+api.post('/reset', UserController.recoverPasswordSubmit);
 api.get('/user/:id', md_auth.ensureAuth ,UserController.getUser);
 api.get('/users/:page?/:sort?', md_auth.ensureAuth, UserController.getUsers);
 api.get('/confirm/:confirmationCode', UserController.verifyUser);

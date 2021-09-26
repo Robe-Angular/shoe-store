@@ -158,7 +158,12 @@ function loginUser(req, res){
                         }
                     }else{
                         if(!user.emailConfirmed){
-                            return messageError(res, 300, 'Email not confirmed');
+                            if(!check){
+                                return messageError(res, 300, 'incorrect password');
+                            }else{
+                                return messageError(res, 300, 'Email not confirmed');
+                            }
+                            
                         }else{
                             return messageError(res, 300, 'incorrect password');
                         }
@@ -173,7 +178,7 @@ function loginUser(req, res){
     });
 }
 
-function recoverPassword(req,res){
+function recoverPasswordEmail(req,res){
     const roundHash = 10; //must be same on PasswordResetGet
     let userEmail = req.body.email;
     let recoverPassword = new RecoverPassword();
@@ -247,23 +252,45 @@ function recoverPassword(req,res){
     });
 }
 
-function getUserResetCode(req,res){
-    var emailCrypted = req.params.emailCrypt;
-    var resetCode = req.params.resetCode;
+function recoverPasswordSubmit(req,res){
+    const roundHash = 8;
+    let params = req.body;
+    let email = params.email;
+    let recoveryPaswordCode = params.recoveryPasswordCode;
+    let newPassword = params.newPassword;
+    let userToUpdate = new User();
+    console.log(params);
+    console.log(recoveryPaswordCode);
+    User.findOne({'email':email}, (error, user)=>{
+        if(error) return messageError(res,500,'Server error');
+        if(user){
+            console.log(recoveryPaswordCode);
+            RecoverPassword.findOne({'recoverCode': recoveryPaswordCode},(err, recoverPassword) => {
+                if(err) return messageError(res,500,'Server error');
+                if(recoverPassword){
+                    if(recoverPassword.user = user._id){
+                        userToUpdate = user;
+                        bcrypt.hash(newPassword, roundHash, (err, hash) => {
+                            userToUpdate.password = hash;
+                            User.findByIdAndUpdate(user._id, userToUpdate,{new: true}, (err, userUpdated) => {
+                                return res.status(200).send({
+                                    userUpdated
+                                });
+                            });
+                        });
+                        
+                    }else{
+                        return messageError(res,300,'user not match with code');
+                    }
+                }else{
+                    return messageError(res,300,'Code not exists');
+                }
 
-    RecoverPassword.findOne({'resetCode':resetCode},(err,recoverPassword) => {
-        if(err) return messageError(res,500,'Server Error');
-        if(recoverPassword){
-            return res.status(200).send({
-                emailCrypted,
-                resetCode
             });
         }else{
-            return messageError(res,500,'The recovery code may have expired');
+            return messageError(res,500,'No user found');
         }
-        
     });
-    
 
 }
 
@@ -279,7 +306,7 @@ function getUser(req,res){
 
             return res.status(200).send({user});
         });
-    }
+    };
     
     if(userId == userSessionId){
         findUser();
@@ -337,8 +364,8 @@ module.exports = {
     saveUser,
     verifyUser,
     loginUser,
-    recoverPassword,
-    getUserResetCode,
+    recoverPasswordEmail,
+    recoverPasswordSubmit,
     getUser,
     getUsers
 }
