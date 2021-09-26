@@ -179,38 +179,36 @@ function loginUser(req, res){
 }
 
 function recoverPasswordEmail(req,res){
-    const roundHash = 10; //must be same on PasswordResetGet
+    const roundHashPasswordCode = 10; //must be same on PasswordResetGet
     let userEmail = req.body.email;
     let recoverPassword = new RecoverPassword();
     
     //save recover password on DB and send email
     const setRecoverPassword = (res,recoverPassword, recoverUser) => {
-        
         recoverPassword.user = recoverUser._id;
-
-        recoverPassword.recoverCode = g_f_createCode();
-        resetCode = recoverPassword.recoverCode;
-
+        let resetCode = g_f_createCode();
         
-        recoverPassword.save((err,recoverPasswordStored) => {
-            if(err) {
-                
-                return messageError(res,500,'Request error');
-            }
-            if(recoverPasswordStored) {
-                bcrypt.hash(recoverUser.email, roundHash, (err, hash) => {
-                    hash = hash.replace(/\//g, "aSimpleSlash").replace(/\$/g,"aSimpleDolar").replace(/\./g,"aSimpleDot");
-                    sendResetEmail(transport,hiddenUser,recoverUser.name,recoverUser.email,hash,resetCode);
-
-                    return res.status(200).send({recoverPasswordStored});
+        bcrypt.hash(resetCode,roundHashPasswordCode,(err,hash) => {
+            if(err) return messageError(res,500,'Request error');
+            if(hash){
+                recoverPassword.recoverCode = hash;
+                recoverPassword.save((err,recoverPasswordStored) => {
+                    if(err) return messageError(res,500,'Request error');
+                    
+                    if(recoverPasswordStored) {
+                        sendResetEmail(transport,hiddenUser,recoverUser.name,recoverUser.email,resetCode);
+                        return res.status(200).send({recoverPasswordStored});
+                    }
                 });
             }
+            
         });
+        
+        
         
     };
 
     const newRecover = () => User.findOne({'email':userEmail}).exec((err,user) => {
-        
         if(err) return messageError (res,500,'Request error');
         if(user) {                    
             setRecoverPassword(res,recoverPassword,user);
@@ -218,6 +216,7 @@ function recoverPasswordEmail(req,res){
             return messageError(res,300,'If you have any account the email was sended')
         }
     });
+    
     RecoverPassword.find().populate('user').exec((err,recoversPassword) => {
         if(err) return messageError(res,500, 'Request error');    
         
@@ -234,58 +233,58 @@ function recoverPasswordEmail(req,res){
             });
             if(recoverUserExists){
                 RecoverPassword.find({'_id':recoverId}).deleteOne((err,removed) => {
-                    if(err) {
-                        return messageError(res,500,'Request error');
-                    }
+                    if(err) return messageError(res,500,'Request error');                    
                     if(removed) setRecoverPassword(res,recoverPassword,recoverUser);
                 });
             }else{
-            
                 newRecover();
             }
         }else{                
-            
             newRecover();
         }
-    
-
     });
 }
 
 function recoverPasswordSubmit(req,res){
     const roundHash = 8;
+    const roundHashPasswordCode = 10;
     let params = req.body;
     let email = params.email;
     let recoveryPaswordCode = params.recoveryPasswordCode;
     let newPassword = params.newPassword;
     let userToUpdate = new User();
-    console.log(params);
-    console.log(recoveryPaswordCode);
+    
     User.findOne({'email':email}, (error, user)=>{
         if(error) return messageError(res,500,'Server error');
         if(user){
-            console.log(recoveryPaswordCode);
-            RecoverPassword.findOne({'recoverCode': recoveryPaswordCode},(err, recoverPassword) => {
+            
+            RecoverPassword.findOne({'user': user._id},(err, recoverPassword) => {
                 if(err) return messageError(res,500,'Server error');
+                
                 if(recoverPassword){
-                    if(recoverPassword.user = user._id){
-                        userToUpdate = user;
-                        bcrypt.hash(newPassword, roundHash, (err, hash) => {
-                            userToUpdate.password = hash;
-                            User.findByIdAndUpdate(user._id, userToUpdate,{new: true}, (err, userUpdated) => {
-                                return res.status(200).send({
-                                    userUpdated
+                    let recoverPasswordId = recoverPassword._id;
+                    bcrypt.compare(recoveryPaswordCode, recoverPassword.recoverCode, (err, check) => {
+                        if(recoverPassword.user = user._id){
+                            userToUpdate = user;
+                            bcrypt.hash(newPassword, roundHash, (err, hash) => {
+                                userToUpdate.password = hash;
+                                User.findByIdAndUpdate(user._id, userToUpdate,{new: true}, (err, userUpdated) => {
+                                    RecoverPassword.find({'_id':recoverPasswordId}).deleteOne((err,recoverPasswordDeleted) => {
+                                        if(err) return messageError(res,500,'Server error');
+                                        if(recoverPasswordDeleted) return res.status(200).send({userUpdated});                                                                               
+                                    });
+                                    
                                 });
                             });
-                        });
-                        
-                    }else{
-                        return messageError(res,300,'user not match with code');
-                    }
+                            
+                        }else{
+                            return messageError(res,300,'user not match with code');
+                        }                    
+                    });
                 }else{
                     return messageError(res,300,'Code not exists');
                 }
-
+                            
             });
         }else{
             return messageError(res,500,'No user found');
@@ -335,28 +334,31 @@ function getUsers(req,res){
             return messageError(res,300,'Don\'t have credentials')
         }else{
             User.find(null,'-password').sort(sort).paginate(page, itemsPerPage, (err, users, total) => {
-                if(err) {
-                    return messageError(res, 500,'Error en la petición');
-                }else{
-                    if(!users) {
-                        return messageError(res, 300, 'No users');
-                    }else{
-                        if(users.length == 0){
-                            return messageError(res,300,'No many users');
-                        }else{
-                            return res.status(200).send({
-                                users,
-                                total,
-                                pages: Math.ceil(total / itemsPerPage)
-                            });
-                        }
-                    }                    
-                }
+                if(err) return messageError(res, 500,'Error en la petición');
                 
+                if(!users) {
+                    return messageError(res, 300, 'No users');
+                }else{
+                    if(users.length == 0){
+                        return messageError(res,300,'No many users');
+                    }else{
+                        return res.status(200).send({
+                            users,
+                            total,
+                            pages: Math.ceil(total / itemsPerPage)
+                        });
+                    }
+                }                                    
             });
         }
     },
     );
+}
+
+function updateUser(req,res){
+    params = req.body;
+    userSessionId = req.user.sub;
+
 }
 
 

@@ -27,7 +27,7 @@ const service ={
         });
     },
 
-    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,emailCrypt ,resetCode) => {
+    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,resetCode) => {
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
