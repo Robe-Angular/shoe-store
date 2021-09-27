@@ -11,8 +11,7 @@ var UserSchema = Schema({
     password: {type: String, default:''},
     role: {type: String, default:''},
     emailConfirmed: {type: Boolean, default:false},
-    confirmationCode: {type: String, default: ''}
-
-
+    confirmationCode: {type: String, default: ''},
+    createdAt:{type: Date, default: Date.now}
 });
 module.exports = mongoose.model('User', UserSchema)

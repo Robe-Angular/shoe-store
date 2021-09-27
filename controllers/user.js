@@ -14,6 +14,8 @@ var RecoverPassword = require('../models/recoverPassword');
 
 const constService = require('../services/constService');
 const emailService = require('../services/emailService');
+const { update } = require('../models/user');
+const user = require('../models/user');
 
 const messageError = (res,errorId, message) => {
     constService.messageError(res, errorId, message)
@@ -43,11 +45,27 @@ const g_f_createCode = () => {
     return confirmationCode;
 }
 
+const regexLowerCase = (stringToRegex) => {
+    let regex = new RegExp(`^${stringToRegex}$`, 'i');
+    return regex;
+}
+
 const transport = newTransport('Hotmail', hiddenUser, hiddenPassword);
+//not used but maybe useful in the future
+/*
+const replaceSlashesDotsAndDollars = (stringToReplace) => {
+    return stringToReplace.split('.').join('ASimpleDot').split('/').join('ASimpleSlash').split('$').join('ASimpleDollar')
+}
+
+const reverseReplaceSlashesDotsAndDollars = (stringToReplace) => {
+    return stringToReplace.split('AsimpleDot').join('.').split('AsimpleSlash').join('/').split('ASimpleDollar').join('$')
+}
+*/
 
 function saveUser(req,res){   
     
     const roundHash = 8;
+    const roundHashVerification = 10;
     var params = req.body;
     var user = new User();
     /*
@@ -67,6 +85,7 @@ function saveUser(req,res){
         user.nick = params.nick;
         user.email = params.email;
         user.role = 'ROLE_USER';
+        
     }else{
         return res.status(300).send({
             message: 'Send all fields'
@@ -74,8 +93,16 @@ function saveUser(req,res){
     }
     
     //user duplicated control
-    
-    User.findOne({email:user.email}, (err,userExist) => {
+    let userEmail = user.email;
+    let userNick = user.nick;
+    let regexQueryEmail= regexLowerCase(userEmail);
+    let regexQueryNick= regexLowerCase(userNick);
+
+    User.findOne({$or: [
+                    {email:regexQueryEmail},
+                    {nick:regexQueryNick}
+                ]})
+    .exec((err,userExist) => {
         if(err){
             return res.status(500).send({message:'Request error'});
         }
@@ -90,23 +117,25 @@ function saveUser(req,res){
                 }
                 user.password = hash;
                 
-                //Confirmación de email           
-                
-                user.confirmationCode = g_f_createCode();
-                
-                user.save((err, userStored) => {
-                    if(err) return messageError(res, 500, 'Error at saving user')
-                    if(userStored){
+                //Confirmación de email               
+                let confirmationCode = g_f_createCode();
 
-                        userStored.password = undefined;
-                        
-                        sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, userStored.confirmationCode);
-                        userStored.confirmationCode = undefined;
-                        return res.status(200).send({
-                            userStored
-                        });
-                    }
-                });                
+                bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
+                    user.confirmationCode = encryptedCode;
+                    user.save((err, userStored) => {
+                        if(err) return messageError(res, 500, 'Error at saving user')
+                        if(userStored){
+    
+                            userStored.password = undefined;
+                            
+                            sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode);
+
+                            return res.status(200).send({
+                                userStored
+                            });
+                        }
+                    });                
+                });
             });          
         }
     });
@@ -114,19 +143,29 @@ function saveUser(req,res){
 }
 
 function verifyUser(req, res){
-    User.findOne({confirmationCode:req.params.confirmationCode}, (err,user) => {
+    let emailParams = req.body.email;
+    let codeVerificationParams = req.body.recoverPassword;
+    let regexQueryEmail = regexLowerCase(emailParams);
+    User.findOne({email:regexQueryEmail}, (err,user) => {
         if(err) return messageError(res, 500, 'Request error');
         if(user){
-            user.emailConfirmed = true;
-            user.confirmationCode = '';
-            user.save(err => {
-                if(err){
-                    return messageError(res, 500, 'Request error');
-                }else{
-                    user.password = undefined;
-                    return res.status(200).send({
-                        user
+            bcrypt.compare(codeVerificationParams, user.confirmationCode, (err, match) => {
+                if(err) return messageError(res,500,'Server Error');            
+                user.emailConfirmed = match;
+                user.confirmationCode = '';
+                if(user.emailConfirmed){
+                    user.save(err => {
+                        if(err){
+                            return messageError(res, 500, 'Request error');
+                        }else{
+                            user.password = undefined;
+                            return res.status(200).send({
+                                user
+                            });
+                        }
                     });
+                }else{
+                    return messageError(res,300,'No match Code');
                 }
             });
         }else{
@@ -200,12 +239,8 @@ function recoverPasswordEmail(req,res){
                         return res.status(200).send({recoverPasswordStored});
                     }
                 });
-            }
-            
-        });
-        
-        
-        
+            }            
+        });        
     };
 
     const newRecover = () => User.findOne({'email':userEmail}).exec((err,user) => {
@@ -356,8 +391,50 @@ function getUsers(req,res){
 }
 
 function updateUser(req,res){
-    params = req.body;
-    userSessionId = req.user.sub;
+    let BodyParams = req.body;
+    let userRequestId = req.params.UserId;
+    let userSessionId = req.user.sub;   
+    
+    let regexQueryEmail= regexLowerCase(BodyParams.email);
+    let regexQueryNick= regexLowerCase(BodyParams.nick);
+    delete BodyParams.password;
+
+    if(userSessionId != userRequestId) {
+        return messageError(res,300, 'No puedes actualizar el usuario');
+    }
+    if(BodyParams.email && BodyParams.nick){
+        user.email = BodyParams.email
+        user.nick = BodyParams.nick
+        User.find({ $or:[
+            {email: regexQueryEmail},
+            {nick: regexQueryNick}
+        ]}).exec((err,users) => {
+            if(err) return messageError(res,500,'Server error');
+            if(users.length == 1 && users[0]._id != req.user.sub || users.length > 1){
+                return messageError(res,300,'El usuario ya existe no se actualizó al usuario');
+            }else{
+                if(req.user.email == user.email){
+                    user.findByIdAndUpdate(userSessionId,{$set:BodyParams},{new:true}, (err, userUpdated) => {
+                        if (err) return messageError(res,500,'Server Error');
+                        if(userUpdated){
+                            return res.status(200).send({
+                                token: jwt.createToken(user),
+                                userUpdated
+                            });
+                        }else{
+                            if (err) return messageError(res,300,'No credentials');
+                        }
+                    });
+                }else{
+
+                }                
+            }
+        });
+    }
+    function UpdatingBecauseDiferentEmail(req,res){
+
+    }
+
 
 }
 
@@ -369,7 +446,8 @@ module.exports = {
     recoverPasswordEmail,
     recoverPasswordSubmit,
     getUser,
-    getUsers
+    getUsers,
+    updateUser
 }
 
 

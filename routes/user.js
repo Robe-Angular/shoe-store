@@ -11,6 +11,8 @@ api.post('/recover', UserController.recoverPasswordEmail);
 api.post('/reset', UserController.recoverPasswordSubmit);
 api.get('/user/:id', md_auth.ensureAuth ,UserController.getUser);
 api.get('/users/:page?/:sort?', md_auth.ensureAuth, UserController.getUsers);
-api.get('/confirm/:confirmationCode', UserController.verifyUser);
+api.post('/confirm', UserController.verifyUser);
+
+api.put('/update/:UserId',md_auth.ensureAuth ,UserController.updateUser);
 
 module.exports = api;
