@@ -12,7 +12,7 @@ api.post('/reset', UserController.recoverPasswordSubmit);
 api.get('/user/:id', md_auth.ensureAuth ,UserController.getUser);
 api.get('/users/:page?/:sort?', md_auth.ensureAuth, UserController.getUsers);
 api.post('/confirm', UserController.verifyUser);
-
-api.put('/update/:UserId',md_auth.ensureAuth ,UserController.updateUser);
+api.put('/update/:UserId',md_auth.ensureAuth , UserController.updateUser);
+api.post('/changeEmail', md_auth.ensureAuth, UserController.updatingBecauseDiferentEmail);
 
 module.exports = api;

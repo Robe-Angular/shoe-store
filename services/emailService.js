@@ -31,7 +31,7 @@ const service ={
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
-            subject: "Please confirm your count",
+            subject: "Password Reset",
             html: `
                 <h1>Password reset</h1>
                 <h2>Hello ${receiverName}</h2>
@@ -47,12 +47,12 @@ const service ={
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
-            subject: "Please confirm your count",
+            subject: "Please confirm your Update",
             html: `
                 <h1>Email confirmation</h1>
                 <h2>Hello ${receiverName}</h2>
-                <p>Thanks for suscribing. Please confirm your email by clicking on the following</p>
-                <p>link: <a href=http://localhost:3800/api/confirmUpdate/${confirmationCode}>click here</a></p>
+                <p>Thanks for suscribing. Please confirm your email update with te confirmation Code</p>
+                <p>${confirmationCode}</p>
             `
         });
     }

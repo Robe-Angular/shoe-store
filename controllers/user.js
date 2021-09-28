@@ -10,12 +10,13 @@ const hiddenPassword = process.env.EMAIL_PASSWORD;
 var jwt = require('../services/jwt');
 
 var User = require('../models/user');
+var ConfirmationUpdateEmail = require('../models/confirmationUpdateEmail');
 var RecoverPassword = require('../models/recoverPassword');
 
 const constService = require('../services/constService');
-const emailService = require('../services/emailService');
-const { update } = require('../models/user');
-const user = require('../models/user');
+//const emailService = require('../services/emailService');
+
+
 
 const messageError = (res,errorId, message) => {
     constService.messageError(res, errorId, message)
@@ -23,6 +24,9 @@ const messageError = (res,errorId, message) => {
 const ensureAdmin = (req,res,callback) =>{
     constService.ensureAdmin(req,res,callback);
 }
+const {newTransport, sendConfirmationEmail, sendConfirmationEmailOnUpdating, sendResetEmail} = require('../services/emailService');
+const confirmationUpdateEmail = require('../models/confirmationUpdateEmail');
+/*
 
 const newTransport = (service,emailUser,emailPassword) => {
     return emailService.newTransport(service,emailUser,emailPassword);
@@ -32,9 +36,14 @@ const sendConfirmationEmail = (transport,senderEmail,receiverName, receiverEmail
     emailService.sendConfirmationEmail(transport, senderEmail,receiverName, receiverEmail, confirmationCode);
 };
 
+const sendConfirmationEmailOnUpdating  = (transport,senderEmail,receiverName,receiverEmail,confirmationCode) => {
+    emailService.sendConfirmationEmailOnUpdating(transport,senderEmail,receiverName,receiverEmail,confirmationCode);
+};
+
 const sendResetEmail = (transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode) => {
     emailService.sendResetEmail(transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode);
 };
+*/
 
 const g_f_createCode = () => {
     const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -144,7 +153,7 @@ function saveUser(req,res){
 
 function verifyUser(req, res){
     let emailParams = req.body.email;
-    let codeVerificationParams = req.body.recoverPassword;
+    let codeVerificationParams = req.body.confirmationCode;
     let regexQueryEmail = regexLowerCase(emailParams);
     User.findOne({email:regexQueryEmail}, (err,user) => {
         if(err) return messageError(res, 500, 'Request error');
@@ -177,10 +186,11 @@ function verifyUser(req, res){
 function loginUser(req, res){
     const roundHash = 8;
     
-    var params = req.body;
-    var email = params.email;
-    var password = params.password;
-    User.findOne({email:email},(err, user) => {
+    let params = req.body;
+    let email = params.email;
+    let password = params.password;
+    let regexQueryEmail = regexLowerCase(email);
+    User.findOne({email:regexQueryEmail},(err, user) => {
         if(err){
             return messageError(res,500,'Request error');
         }else{
@@ -391,6 +401,7 @@ function getUsers(req,res){
 }
 
 function updateUser(req,res){
+    const roundHash = 10;
     let BodyParams = req.body;
     let userRequestId = req.params.UserId;
     let userSessionId = req.user.sub;   
@@ -398,6 +409,19 @@ function updateUser(req,res){
     let regexQueryEmail= regexLowerCase(BodyParams.email);
     let regexQueryNick= regexLowerCase(BodyParams.nick);
     delete BodyParams.password;
+    let user = new User();
+
+    const saveNewConfirmationUpdateEmail = (confirmationUpdateEmail) =>{
+        confirmationUpdateEmail.save((err, confirmationUpdateEmailStored) => {
+            if(err) return messageError(res,500,'Server error');
+            if(confirmationUpdateEmailStored){
+                
+                return res.status(200).send({
+                    confirmationUpdateEmailStored
+                });
+            }
+        });
+    }
 
     if(userSessionId != userRequestId) {
         return messageError(res,300, 'No puedes actualizar el usuario');
@@ -411,10 +435,13 @@ function updateUser(req,res){
         ]}).exec((err,users) => {
             if(err) return messageError(res,500,'Server error');
             if(users.length == 1 && users[0]._id != req.user.sub || users.length > 1){
-                return messageError(res,300,'El usuario ya existe no se actualizó al usuario');
+                return messageError(res,300,'Nickname or email already used');
             }else{
-                if(req.user.email == user.email){
-                    user.findByIdAndUpdate(userSessionId,{$set:BodyParams},{new:true}, (err, userUpdated) => {
+                let lowerReqUserEmail = req.user.email.toLowerCase();
+                let lowerUserEmail = user.email.toLowerCase();
+                if(lowerUserEmail == lowerReqUserEmail){
+
+                    User.findByIdAndUpdate(userSessionId,{$set:BodyParams},{new:true}, (err, userUpdated) => {
                         if (err) return messageError(res,500,'Server Error');
                         if(userUpdated){
                             return res.status(200).send({
@@ -426,16 +453,42 @@ function updateUser(req,res){
                         }
                     });
                 }else{
-
+                    confirmationUpdateCode = g_f_createCode();
+                    let confirmationUpdateEmail = new ConfirmationUpdateEmail();
+                    sendConfirmationEmailOnUpdating(transport,hiddenUser,req.user.name,user.email,confirmationUpdateCode);                    
+                    confirmationUpdateEmail.user = userSessionId;
+                    confirmationUpdateEmail.email = user.email;
+                    confirmationUpdateEmail.nick = user.nick;
+                    bcrypt.hash(confirmationUpdateCode, roundHash, (err, hash) => {
+                        if(err) return messageError(res,500,'Server error');
+                        if(hash){
+                            confirmationUpdateEmail.confirmationCode = hash;
+                            ConfirmationUpdateEmail.findOne({user:userSessionId},(err, confirmationUpdateEmailExists) => {
+                                if(confirmationUpdateEmailExists){
+                                    ConfirmationUpdateEmail.deleteOne({_id:confirmationUpdateEmailExists}, (err) => {
+                                        if(err) return messageError(res,500,'Server Error');
+                                        saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
+                                    });
+                                    
+                                }else{
+                                    saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
+                                }
+                                
+                            });                            
+                        }
+                    });                                                
                 }                
             }
         });
+    }else{
+        return messageError(res,300,'Field empty');
     }
-    function UpdatingBecauseDiferentEmail(req,res){
+}
 
-    }
+function updatingBecauseDiferentEmail(req,res){
+    let userSessionId = req.user.sub;
 
-
+    //ConfirmationUpdateEmail.findOne(user:);
 }
 
 
@@ -447,7 +500,8 @@ module.exports = {
     recoverPasswordSubmit,
     getUser,
     getUsers,
-    updateUser
+    updateUser,
+    updatingBecauseDiferentEmail
 }
 
 
