@@ -321,7 +321,6 @@ function recoverPasswordSubmit(req,res){
                                     
                                 });
                             });
-                            
                         }else{
                             return messageError(res,300,'user not match with code');
                         }                    
@@ -329,7 +328,6 @@ function recoverPasswordSubmit(req,res){
                 }else{
                     return messageError(res,300,'Code not exists');
                 }
-                            
             });
         }else{
             return messageError(res,500,'No user found');
@@ -465,15 +463,14 @@ function updateUser(req,res){
                             confirmationUpdateEmail.confirmationCode = hash;
                             ConfirmationUpdateEmail.findOne({user:userSessionId},(err, confirmationUpdateEmailExists) => {
                                 if(confirmationUpdateEmailExists){
-                                    ConfirmationUpdateEmail.deleteOne({_id:confirmationUpdateEmailExists}, (err) => {
+                                    ConfirmationUpdateEmail.deleteOne({_id:confirmationUpdateEmailExists._id}, (err) => {
                                         if(err) return messageError(res,500,'Server Error');
                                         saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
                                     });
                                     
                                 }else{
                                     saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
-                                }
-                                
+                                }                                
                             });                            
                         }
                     });                                                
@@ -487,8 +484,84 @@ function updateUser(req,res){
 
 function updatingBecauseDiferentEmail(req,res){
     let userSessionId = req.user.sub;
+    let confirmationCode = req.body.confirmationCode;
+    let passwordBody = req.body.password;
 
-    //ConfirmationUpdateEmail.findOne(user:);
+    const deleteConfirmation = (confirmationUpdateId,functionCallback) => {
+        ConfirmationUpdateEmail.deleteOne({_id:confirmationUpdateId}).exec(functionCallback);
+    };
+    ConfirmationUpdateEmail.findOne({user:userSessionId},(err,confirmationUpdateEmail) => {
+        console.log('here');
+        console.log(err);
+        if(err) return messageError(res,500,'Server error');
+        
+        if(confirmationUpdateEmail){
+            bcrypt.compare(confirmationCode,confirmationUpdateEmail.confirmationCode,(err,matchCode) => {
+                console.log(err);
+                if(err) return messageError(res,500,'Server error');
+                if(matchCode){
+                    User.findById(userSessionId, (err,user) => {
+                        console.log(err);
+                        if(err) return messageError(res,500,'Server error');
+                        
+                        bcrypt.compare(passwordBody, user.password,(err,match) => {
+                            console.log('here');
+                            console.log(err);
+                            if(err) return messageError(res,500,'Server error');
+                            //Duplicated User Control delete confirmation UpdateEmail from DB
+                            let regexQueryEmail = regexLowerCase(confirmationUpdateEmail.email);
+                            let regexQueryNick = regexLowerCase(confirmationUpdateEmail.nick);
+                            User.find(
+                                {$or:[
+                                    {email:regexQueryEmail},
+                                    {nick:regexQueryNick}
+                            ]}).exec((err,users) => {
+                                if(err) return messageError(res,500,'Server Error')
+                                if(users.length == 0){
+                                    deleteConfirmation(confirmationUpdateEmail._id,(err) => {
+                                        if(err) return messageError(res,500,'Server Error');
+                                        if(user && match){
+                                            user.nick = confirmationUpdateEmail.nick;
+                                            user.email = confirmationUpdateEmail.email;
+                                            User.findByIdAndUpdate(userSessionId,user,{new:true}, (err,userUpdated) => {
+                                                console.log(err);
+                                                if(err) return messageError(res,500,'Server error');
+                                                if(userUpdated){
+                                                    userUpdated.password == undefined;
+                                                    return res.status(200).send({
+                                                        userUpdated
+                                                    });
+                                                }else{  
+                                                    return messageError(res,300,'No user matched');
+                                                }
+                                            });
+                                        }else{
+                                            console.log(match);
+                                            return messageError(res,300,'No user match')
+                                        }
+                                    });
+                                    
+                                }else{
+                                    deleteConfirmation(confirmationUpdateEmail._id, (err,removed) => {
+                                        console.log(confirmationUpdateEmail._id);
+                                        console.log(removed);
+                                        if(err) return messageError(res,500,'Server Error')
+                                        return messageError(res,300,'User nickname or email already exists');
+                                    });                                    
+                                }
+                            });
+                        });
+                    });
+                }else{
+                    return messageError(res,300,'No code match')
+                }
+            });
+            
+        }else{
+            console.log(userSessionId);
+            return messageError(res,300,'No user match')
+        }
+    }); 
 }
 
 
