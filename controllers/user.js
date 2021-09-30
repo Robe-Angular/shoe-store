@@ -292,14 +292,13 @@ function recoverPasswordEmail(req,res){
 
 function recoverPasswordSubmit(req,res){
     const roundHash = 8;
-    const roundHashPasswordCode = 10;
     let params = req.body;
-    let email = params.email;
+    let regexQueryEmail = regexLowerCase(params.email);
     let recoveryPaswordCode = params.recoveryPasswordCode;
     let newPassword = params.newPassword;
     let userToUpdate = new User();
     
-    User.findOne({'email':email}, (error, user)=>{
+    User.findOne({'email':regexQueryEmail}, (error, user)=>{
         if(error) return messageError(res,500,'Server error');
         if(user){
             
@@ -316,9 +315,9 @@ function recoverPasswordSubmit(req,res){
                                 User.findByIdAndUpdate(user._id, userToUpdate,{new: true}, (err, userUpdated) => {
                                     RecoverPassword.find({'_id':recoverPasswordId}).deleteOne((err,recoverPasswordDeleted) => {
                                         if(err) return messageError(res,500,'Server error');
-                                        if(recoverPasswordDeleted) return res.status(200).send({userUpdated});                                                                               
+                                        userUpdated.password = undefined;                                        
+                                        if(recoverPasswordDeleted) return res.status(200).send({userUpdated});
                                     });
-                                    
                                 });
                             });
                         }else{
@@ -367,7 +366,6 @@ function getUsers(req,res){
         if(req.params.page){
             page = req.params.page;
         }
-
         sort = '_id';
         if(req.params.sort){
             sort = req.params.sort            
@@ -441,9 +439,10 @@ function updateUser(req,res){
 
                     User.findByIdAndUpdate(userSessionId,{$set:BodyParams},{new:true}, (err, userUpdated) => {
                         if (err) return messageError(res,500,'Server Error');
+                        userUpdated.password = undefined;
                         if(userUpdated){
                             return res.status(200).send({
-                                token: jwt.createToken(user),
+                                token: jwt.createToken(userUpdated),
                                 userUpdated
                             });
                         }else{
@@ -467,7 +466,6 @@ function updateUser(req,res){
                                         if(err) return messageError(res,500,'Server Error');
                                         saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
                                     });
-                                    
                                 }else{
                                     saveNewConfirmationUpdateEmail(confirmationUpdateEmail);
                                 }                                
@@ -491,22 +489,15 @@ function updatingBecauseDiferentEmail(req,res){
         ConfirmationUpdateEmail.deleteOne({_id:confirmationUpdateId}).exec(functionCallback);
     };
     ConfirmationUpdateEmail.findOne({user:userSessionId},(err,confirmationUpdateEmail) => {
-        console.log('here');
-        console.log(err);
         if(err) return messageError(res,500,'Server error');
-        
         if(confirmationUpdateEmail){
             bcrypt.compare(confirmationCode,confirmationUpdateEmail.confirmationCode,(err,matchCode) => {
-                console.log(err);
                 if(err) return messageError(res,500,'Server error');
                 if(matchCode){
                     User.findById(userSessionId, (err,user) => {
-                        console.log(err);
                         if(err) return messageError(res,500,'Server error');
-                        
                         bcrypt.compare(passwordBody, user.password,(err,match) => {
-                            console.log('here');
-                            console.log(err);
+                            
                             if(err) return messageError(res,500,'Server error');
                             
                             let regexQueryEmail = regexLowerCase(confirmationUpdateEmail.email);
@@ -528,11 +519,11 @@ function updatingBecauseDiferentEmail(req,res){
                                             user.nick = confirmationUpdateEmail.nick;
                                             user.email = confirmationUpdateEmail.email;
                                             User.findByIdAndUpdate(userSessionId,user,{new:true}, (err,userUpdated) => {
-                                                console.log(err);
                                                 if(err) return messageError(res,500,'Server error');
                                                 if(userUpdated){
-                                                    userUpdated.password == undefined;
+                                                    userUpdated.password = undefined;
                                                     return res.status(200).send({
+                                                        token: jwt.createToken(userUpdated),
                                                         userUpdated
                                                     });
                                                 }else{  
@@ -540,15 +531,11 @@ function updatingBecauseDiferentEmail(req,res){
                                                 }
                                             });
                                         }else{
-                                            console.log(match);
                                             return messageError(res,300,'No user match')
                                         }
                                     });
-                                    
                                 }else{
                                     deleteConfirmation(confirmationUpdateEmail._id, (err,removed) => {
-                                        console.log(confirmationUpdateEmail._id);
-                                        console.log(removed);
                                         if(err) return messageError(res,500,'Server Error')
                                         return messageError(res,300,'User nickname or email already exists');
                                     });                                    
@@ -560,9 +547,7 @@ function updatingBecauseDiferentEmail(req,res){
                     return messageError(res,300,'No code match')
                 }
             });
-            
         }else{
-            console.log(userSessionId);
             return messageError(res,300,'No user match')
         }
     }); 
