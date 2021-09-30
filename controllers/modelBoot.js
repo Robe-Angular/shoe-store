@@ -4,13 +4,8 @@ var mongoosePaginate = require('mongoose-pagination');
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 
-const constService = require('../services/constService');
-const messageError = (res,errorId, message) => {
-    constService.messageError(res, errorId, message)
-};
-const ensureAdmin = (req,res,callback) =>{
-    constService.ensureAdmin(req,res,callback);
-};
+const {messageError, ensureAdmin} = require('../services/constService');
+
 
 function saveModelBoot(req,res){
     ensureAdmin(req,res,() =>{
@@ -19,6 +14,7 @@ function saveModelBoot(req,res){
 
         modelBoot.description = params.description;
         modelBoot.color = params.color;
+        modelBoot.price = params.price;
         
         var minSize = params.minSize;
         var maxSize = params.maxSize;
