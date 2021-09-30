@@ -508,7 +508,7 @@ function updatingBecauseDiferentEmail(req,res){
                             console.log('here');
                             console.log(err);
                             if(err) return messageError(res,500,'Server error');
-                            //Duplicated User Control delete confirmation UpdateEmail from DB
+                            
                             let regexQueryEmail = regexLowerCase(confirmationUpdateEmail.email);
                             let regexQueryNick = regexLowerCase(confirmationUpdateEmail.nick);
                             User.find(
@@ -516,8 +516,12 @@ function updatingBecauseDiferentEmail(req,res){
                                     {email:regexQueryEmail},
                                     {nick:regexQueryNick}
                             ]}).exec((err,users) => {
-                                if(err) return messageError(res,500,'Server Error')
-                                if(users.length == 0){
+                                if(err) return messageError(res,500,'Server Error');
+                                let userExists = false;
+                                users.forEach(element => {
+                                    userExists = element._id != userSessionId;
+                                });
+                                if(!userExists){
                                     deleteConfirmation(confirmationUpdateEmail._id,(err) => {
                                         if(err) return messageError(res,500,'Server Error');
                                         if(user && match){
