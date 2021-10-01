@@ -1,7 +1,9 @@
 var bcrypt = require('bcryptjs');
-var mongoosePaginate = require('mongoose-pagination');
 var dotenv = require('dotenv').config();
+var mongoose = require ('mongoose');
+
 const nodemailer = require('nodemailer');
+
 
 const hiddenUser = process.env.EMAIL_USER;
 const hiddenPassword = process.env.EMAIL_PASSWORD;

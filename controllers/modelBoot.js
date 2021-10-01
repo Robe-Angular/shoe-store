@@ -3,8 +3,19 @@ var mongoosePaginate = require('mongoose-pagination');
 
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
+var mongoose = require('mongoose');
 
 const {messageError, ensureAdmin} = require('../services/constService');
+
+const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoot:modelId},(err,sizes) => {
+
+    if(err) return messageError(res,500,'Server error');
+    if(sizes){
+        functionCallback(sizes);
+    }else{
+        return messageError(res,300,'No sizes');
+    }
+});
 
 
 function saveModelBoot(req,res){
@@ -44,7 +55,25 @@ function saveModelBoot(req,res){
         }
     });
 }
+function getModelBootQuantity(req,res){
+    let modelId = req.params.modelId;
+    findModelSizes(res, modelId, (sizes) => {
+        return res.status(200).send({sizes});
+    });
+}
+
+function getAllModelsQuantity(req,res){
+}
+
+function addModelBoot(req,res){
+    ensureAdmin(req,res, () => {
+        let modelId = req.params.modelId;
+
+    });
+}
 
 module.exports = {
-    saveModelBoot    
+    saveModelBoot,
+    getModelBootQuantity
+
 }
