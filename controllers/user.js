@@ -15,37 +15,11 @@ var User = require('../models/user');
 var ConfirmationUpdateEmail = require('../models/confirmationUpdateEmail');
 var RecoverPassword = require('../models/recoverPassword');
 
-const constService = require('../services/constService');
-//const emailService = require('../services/emailService');
+const {messageError,regexLowerCase} = require('../services/constService');
 
-
-
-const messageError = (res,errorId, message) => {
-    constService.messageError(res, errorId, message)
-};
-const ensureAdmin = (req,res,callback) =>{
-    constService.ensureAdmin(req,res,callback);
-}
 const {newTransport, sendConfirmationEmail, sendConfirmationEmailOnUpdating, sendResetEmail} = require('../services/emailService');
 const confirmationUpdateEmail = require('../models/confirmationUpdateEmail');
-/*
 
-const newTransport = (service,emailUser,emailPassword) => {
-    return emailService.newTransport(service,emailUser,emailPassword);
-};
-
-const sendConfirmationEmail = (transport,senderEmail,receiverName, receiverEmail, confirmationCode) => {
-    emailService.sendConfirmationEmail(transport, senderEmail,receiverName, receiverEmail, confirmationCode);
-};
-
-const sendConfirmationEmailOnUpdating  = (transport,senderEmail,receiverName,receiverEmail,confirmationCode) => {
-    emailService.sendConfirmationEmailOnUpdating(transport,senderEmail,receiverName,receiverEmail,confirmationCode);
-};
-
-const sendResetEmail = (transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode) => {
-    emailService.sendResetEmail(transport,senderEmail,receiverName,receiverEmail,emailCrypt,resetCode);
-};
-*/
 
 const g_f_createCode = () => {
     const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -54,11 +28,6 @@ const g_f_createCode = () => {
         confirmationCode += characters[Math.floor(Math.random() * characters.length )];
     }
     return confirmationCode;
-}
-
-const regexLowerCase = (stringToRegex) => {
-    let regex = new RegExp(`^${stringToRegex}$`, 'i');
-    return regex;
 }
 
 const transport = newTransport('Hotmail', hiddenUser, hiddenPassword);
@@ -350,52 +319,42 @@ function getUser(req,res){
             return res.status(200).send({user});
         });
     };
-    
-    if(userId == userSessionId){
-        findUser();
-        
-    }else{        
-        ensureAdmin(req,res, () => {
-            findUser();
-        });
-    }    
+    findUser();
 }
 
 function getUsers(req,res){
     var itemsPerPage = 5;
     var page = 1;
-    ensureAdmin(req,res,()=> {    
-        if(req.params.page){
-            page = req.params.page;
-        }
-        sort = '_id';
-        if(req.params.sort){
-            sort = req.params.sort            
-        }
+    
+    if(req.params.page){
+        page = req.params.page;
+    }
+    sort = '_id';
+    if(req.params.sort){
+        sort = req.params.sort            
+    }
 
-        if(sort == 'password' || sort == '-password'){
-            return messageError(res,300,'Don\'t have credentials')
-        }else{
-            User.find(null,'-password').sort(sort).paginate(page, itemsPerPage, (err, users, total) => {
-                if(err) return messageError(res, 500,'Error en la petición');
-                
-                if(!users) {
-                    return messageError(res, 300, 'No users');
+    if(sort == 'password' || sort == '-password'){
+        return messageError(res,300,'Don\'t have credentials')
+    }else{
+        User.find(null,'-password').sort(sort).paginate(page, itemsPerPage, (err, users, total) => {
+            if(err) return messageError(res, 500,'Error en la petición');
+            
+            if(!users) {
+                return messageError(res, 300, 'No users');
+            }else{
+                if(users.length == 0){
+                    return messageError(res,300,'No many users');
                 }else{
-                    if(users.length == 0){
-                        return messageError(res,300,'No many users');
-                    }else{
-                        return res.status(200).send({
-                            users,
-                            total,
-                            pages: Math.ceil(total / itemsPerPage)
-                        });
-                    }
-                }                                    
-            });
-        }
-    },
-    );
+                    return res.status(200).send({
+                        users,
+                        total,
+                        pages: Math.ceil(total / itemsPerPage)
+                    });
+                }
+            }                                    
+        });
+    }
 }
 
 function updateUser(req,res){
