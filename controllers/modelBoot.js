@@ -2,15 +2,14 @@
 var mongoosePaginate = require('mongoose-pagination');
 
 var ModelBoot = require('../models/modelBoot');
+const sizeBoot = require('../models/sizeBoot');
 var SizeBoot = require('../models/sizeBoot');
-var mongoose = require('mongoose');
-
-const {messageError, ensureAdmin} = require('../services/constService');
+const {messageError} = require('../services/constService');
 
 const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoot:modelId},(err,sizes) => {
 
     if(err) return messageError(res,500,'Server error');
-    if(sizes){
+    if(sizes.length > 0){
         functionCallback(sizes);
     }else{
         return messageError(res,300,'No sizes');
@@ -26,7 +25,7 @@ function saveModelBoot(req,res){
     modelBoot.description = params.description;
     modelBoot.color = params.color;
     modelBoot.price = params.price;
-    
+
     var minSize = params.minSize;
     var maxSize = params.maxSize;
     if(minSize <= maxSize ){
@@ -53,8 +52,8 @@ function saveModelBoot(req,res){
     }else{
         return messageError(res,200,'Min size must be smaller');
     }
-
 }
+
 function getModelBootQuantity(req,res){
     let modelId = req.params.modelId;
     findModelSizes(res, modelId, (sizes) => {
@@ -84,14 +83,45 @@ function getAllModels(req,res){
     });
 }
 
-function addModelBoot(req,res){
-    ensureAdmin(req,res, () => {
+async function addOrSubtractModelBoot(req,res,addOrSubtract){
+    try{
         let modelId = req.params.modelId;
-    });
-}
+        const sizes = await SizeBoot.find({modelBoot:modelId});         
+        let arraySizesStored = [];
+        let keysBody = Object.keys(req.body);
+        for(const key of keysBody){
+            let keySliced = parseInt(key.slice(1));
+            //sizes[keySliced].quantity = req.body[key];  
+            for(let sizeElement of sizes){
+                if (sizeElement.size == keySliced){         
 
+                    let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(req.body[key]);
+                    let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(req.body[key]);
+                    let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
+                    let sizeElementId = sizeElement._id;
+                    const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
+                    arraySizesStored.push(sizeUpdated);
+                }
+            }
+        }
+        return res.status(200).send({
+            arraySizesStored
+        });
+    }catch(error){        
+        return messageError(res,500,'Server Error')
+    }
+}
+function addModelBoot(req,res){
+    addOrSubtractModelBoot(req,res,true);
+}
+function subtractModelBoot(req,res){
+    addOrSubtractModelBoot(req,res,false);
+}
 module.exports = {
     saveModelBoot,
     getModelBootQuantity,
-    getAllModels
+    getAllModels,
+    addModelBoot,
+    subtractModelBoot
 }
+
