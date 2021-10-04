@@ -83,20 +83,19 @@ function getAllModels(req,res){
     });
 }
 
-async function addOrSubtractModelBoot(req,res,addOrSubtract){
+async function addOrSubtractModelBoot(modelId,body,addOrSubtract){
     try{
-        let modelId = req.params.modelId;
         const sizes = await SizeBoot.find({modelBoot:modelId});         
         let arraySizesStored = [];
-        let keysBody = Object.keys(req.body);
+        const keysBody = Object.keys(body);
         for(const key of keysBody){
             let keySliced = parseInt(key.slice(1));
             //sizes[keySliced].quantity = req.body[key];  
             for(let sizeElement of sizes){
                 if (sizeElement.size == keySliced){         
-
-                    let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(req.body[key]);
-                    let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(req.body[key]);
+                    
+                    let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[key]);
+                    let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[key]);
                     let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
                     let sizeElementId = sizeElement._id;
                     const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
@@ -104,18 +103,29 @@ async function addOrSubtractModelBoot(req,res,addOrSubtract){
                 }
             }
         }
-        return res.status(200).send({
-            arraySizesStored
-        });
-    }catch(error){        
-        return messageError(res,500,'Server Error')
+        return arraySizesStored;
+        
+    }catch(error){   
+        console.log(error);
+        return 'error';
     }
 }
-function addModelBoot(req,res){
-    addOrSubtractModelBoot(req,res,true);
+
+async function addModelBoot(req,res){
+    let modelId = req.params.modelId;
+    let body = req.body;
+    let arraysStored = await addOrSubtractModelBoot(modelId,body,true);
+    return res.status(200).send({
+        arraysStored
+    });
 }
-function subtractModelBoot(req,res){
-    addOrSubtractModelBoot(req,res,false);
+async function subtractModelBoot(req,res){
+    let modelId = req.params.modelId;
+    let body = req.body;
+    let arraysStored = await addOrSubtractModelBoot(modelId,body,true);
+    return res.status(200).send({
+        arraysStored
+    });
 }
 module.exports = {
     saveModelBoot,
