@@ -1,8 +1,8 @@
 'use strict'
 var mongoosePaginate = require('mongoose-pagination');
+const modelBoot = require('../models/modelBoot');
 
 var ModelBoot = require('../models/modelBoot');
-const sizeBoot = require('../models/sizeBoot');
 var SizeBoot = require('../models/sizeBoot');
 const {messageError} = require('../services/constService');
 
@@ -54,6 +54,97 @@ function saveModelBoot(req,res){
     }
 }
 
+async function updateModelBoot(req,res){
+    try{
+        let minSizeBody = parseInt(req.body.minSize);
+        let maxSizeBody = parseInt(req.body.maxSize);
+        let modelId = req.params.modelId;
+        
+        if(minSizeBody > maxSizeBody) return messageError(res,300,'Min size is larger than Max size');
+                
+        console.log(minSizeBody > maxSizeBody);
+        
+        const getMaxMin = (sizes) => {
+            let minSize = 10000;
+            let maxSize = 0;
+            for(let size of sizes){
+                minSize = (parseInt(size.size) < parseInt(minSize)) ? parseInt(size.size) : parseInt(minSize);
+                maxSize = (parseInt(size.size) > parseInt(maxSize)) ? parseInt(size.size) : parseInt(maxSize);
+            }
+            return [maxSize,minSize];
+        }
+
+        const sizesDB = await SizeBoot.find({modelBoot:modelId});
+        
+        let maxMinDB = getMaxMin(sizesDB);
+        let maxDB = maxMinDB[0];
+        let minDB = maxMinDB[1];
+        const saveSize = async (sizeInt,modelId) => {
+            let sizeBoot = new SizeBoot();
+            sizeBoot.size = sizeInt;
+            sizeBoot.modelBoot = modelId;
+            let savedSize = await sizeBoot.save();
+        }
+        const deleteSize = async (sizeInt, modelId) =>{ 
+            let deletedSize = await SizeBoot.deleteOne({modelBoot:modelId, size: sizeInt});
+        }
+        if(maxDB < maxSizeBody){
+            for(let i = maxDB; i <= maxSizeBody; i++){
+                saveSize(i,modelId);
+            }
+        }
+        else{
+            for(let i = maxSizeBody + 1 ; i <= maxDB; i++){
+
+                deleteSize(i,modelId);
+            }
+        }
+        if(minDB > minSizeBody){
+            for(let i = minSizeBody; i <= minDB; i++){
+                saveSize(i,modelId);
+            }
+        }
+        else{
+            for(let i = minDB ; i <= (maxDB - 1); i++){
+                deleteSize(i,modelId);
+            }
+        }
+
+        let fieldsUpdate={
+            price: req.body.price,
+            description: req.body.description,
+            color: req.body.color
+        };
+        
+        const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
+        
+        return res.status(200).send({
+            modelUpdated
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,200,'Server error');
+    }
+}
+
+async function deleteModelBoot(req,res){
+    try{
+        let modelId = req.params.modelId;
+        const modelDeleted = await ModelBoot.find({_id:modelId}).deleteOne();
+        const sizesDeleted = await SizeBoot.find({modelBoot:modelId}).deleteMany();
+
+        return res.status(200).send({
+            modelDeleted,
+            sizesDeleted
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,200,'Server error');
+    }
+}
+
+
+
 function getModelBootQuantity(req,res){
     let modelId = req.params.modelId;
     findModelSizes(res, modelId, (sizes) => {
@@ -92,8 +183,7 @@ async function addOrSubtractModelBoot(modelId,body,addOrSubtract){
             let keySliced = parseInt(key.slice(1));
             //sizes[keySliced].quantity = req.body[key];  
             for(let sizeElement of sizes){
-                if (sizeElement.size == keySliced){         
-                    
+                if (sizeElement.size == keySliced){                             
                     let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[key]);
                     let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[key]);
                     let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
@@ -127,8 +217,11 @@ async function subtractModelBoot(req,res){
         arraysStored
     });
 }
+
 module.exports = {
     saveModelBoot,
+    updateModelBoot,
+    deleteModelBoot,
     getModelBootQuantity,
     getAllModels,
     addModelBoot,
