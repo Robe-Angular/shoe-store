@@ -122,36 +122,7 @@ async function updateModelBoot(req,res){
                 deleteSize(i,modelId);
             }
         }
-        /*
-        if(maxDB < maxSizeBody){
-            for(let i = maxDB + 1 ; i <= maxSizeBody; i++){
-                saveSize(i,modelId);
-                console.log('adding' + i);
-                
-            }
-        }
-        else{
-            for(let i = maxSizeBody + 1 ; i <= maxDB; i++){
-                deleteSize(i,modelId);
-                console.log('deleting' + i);
-
-            }
-        }
-        if(minDB >= minSizeBody){
-            for(let i = minSizeBody; i < minDB; i++){
-                saveSize(i,modelId);
-                console.log('adding' + i);
-            }
-        }
-        else{
-            for(let i = minDB ; i <= (maxDB); i++){
-                deleteSize(i,modelId);
-                console.log('deleting' + i);
-            }
-        }
-        */
-
-        
+       
         return res.status(200).send({
             modelUpdated
         });
@@ -159,6 +130,31 @@ async function updateModelBoot(req,res){
         console.log(err);
         return messageError(res,200,'Server error');
     }
+}
+
+async function uploadImage(req,res){
+    var file_name = 'Avatar no subido';
+    if(JSON.stringify(req.files) == '{}'){
+        return res.status(404).send({
+            status: 'error',
+            message: file_name
+        });	
+    }			
+    //Conseguir el nombre y la extensión del archivo
+    var file_path = req.files.file0.path;
+    var file_split = file_path.split('\\');
+
+    //**Advertencia** En linux o Mac 
+    // --->   var file_split = file_path.split('/');
+
+    //Nombre del archivo
+    var file_name = file_split[2];
+
+    //Extensión del archivo
+    var ext_split = file_name.split('\.');
+    var file_ext = ext_split[1];
+    if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif') return messageError(res,300,'invalid extension');
+    
 }
 
 async function deleteModelBoot(req,res){
