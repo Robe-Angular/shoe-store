@@ -60,16 +60,25 @@ async function updateModelBoot(req,res){
         let maxSizeBody = parseInt(req.body.maxSize);
         let modelId = req.params.modelId;
         
+        let fieldsUpdate={
+            price: req.body.price,
+            description: req.body.description,
+            color: req.body.color
+        };
+        
+        const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
+        
         if(minSizeBody > maxSizeBody) return messageError(res,300,'Min size is larger than Max size');
-                
+        if(!modelUpdated) return messageError(res,300,'Model doesn´t exists');
         console.log(minSizeBody > maxSizeBody);
         
         const getMaxMin = (sizes) => {
             let minSize = 10000;
             let maxSize = 0;
-            for(let size of sizes){
+            for(let size of sizes){               
                 minSize = (parseInt(size.size) < parseInt(minSize)) ? parseInt(size.size) : parseInt(minSize);
                 maxSize = (parseInt(size.size) > parseInt(maxSize)) ? parseInt(size.size) : parseInt(maxSize);
+                
             }
             return [maxSize,minSize];
         }
@@ -77,8 +86,11 @@ async function updateModelBoot(req,res){
         const sizesDB = await SizeBoot.find({modelBoot:modelId});
         
         let maxMinDB = getMaxMin(sizesDB);
+        
+        
         let maxDB = maxMinDB[0];
         let minDB = maxMinDB[1];
+        
         const saveSize = async (sizeInt,modelId) => {
             let sizeBoot = new SizeBoot();
             sizeBoot.size = sizeInt;
@@ -87,36 +99,58 @@ async function updateModelBoot(req,res){
         }
         const deleteSize = async (sizeInt, modelId) =>{ 
             let deletedSize = await SizeBoot.deleteOne({modelBoot:modelId, size: sizeInt});
-        }
-        if(maxDB < maxSizeBody){
-            for(let i = maxDB; i <= maxSizeBody; i++){
+        }        
+        for (let i = minSizeBody; i <= maxSizeBody; i++){
+            let sizeBodyExists = false;
+            for(let size of sizesDB){
+                if(size.size == i){
+                    sizeBodyExists = true;
+                }                
+            }
+            if(!sizeBodyExists){
                 saveSize(i,modelId);
+            }
+        }
+        for (let i = minDB; i <= maxDB; i++){
+            let sizeBodyExists = false;
+            for(let j = minSizeBody; j <= maxSizeBody; j++){
+                if(i == j){
+                    sizeBodyExists = true
+                }
+            }
+            if(!sizeBodyExists){
+                deleteSize(i,modelId);
+            }
+        }
+        /*
+        if(maxDB < maxSizeBody){
+            for(let i = maxDB + 1 ; i <= maxSizeBody; i++){
+                saveSize(i,modelId);
+                console.log('adding' + i);
+                
             }
         }
         else{
             for(let i = maxSizeBody + 1 ; i <= maxDB; i++){
-
                 deleteSize(i,modelId);
+                console.log('deleting' + i);
+
             }
         }
-        if(minDB > minSizeBody){
-            for(let i = minSizeBody; i <= minDB; i++){
+        if(minDB >= minSizeBody){
+            for(let i = minSizeBody; i < minDB; i++){
                 saveSize(i,modelId);
+                console.log('adding' + i);
             }
         }
         else{
-            for(let i = minDB ; i <= (maxDB - 1); i++){
+            for(let i = minDB ; i <= (maxDB); i++){
                 deleteSize(i,modelId);
+                console.log('deleting' + i);
             }
         }
+        */
 
-        let fieldsUpdate={
-            price: req.body.price,
-            description: req.body.description,
-            color: req.body.color
-        };
-        
-        const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
         
         return res.status(200).send({
             modelUpdated
@@ -227,4 +261,5 @@ module.exports = {
     addModelBoot,
     subtractModelBoot
 }
+
 
