@@ -1,7 +1,7 @@
 'use strict'
 var mongoosePaginate = require('mongoose-pagination');
+var fs= require('fs');
 const modelBoot = require('../models/modelBoot');
-
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 const {messageError} = require('../services/constService');
@@ -15,6 +15,8 @@ const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoo
         return messageError(res,300,'No sizes');
     }
 });
+
+
 
 
 function saveModelBoot(req,res){
@@ -63,7 +65,8 @@ async function updateModelBoot(req,res){
         let fieldsUpdate={
             price: req.body.price,
             description: req.body.description,
-            color: req.body.color
+            title: req.body.title,
+            color: req.body.color,
         };
         
         const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
@@ -132,28 +135,88 @@ async function updateModelBoot(req,res){
     }
 }
 
-async function uploadImage(req,res){
-    var file_name = 'Avatar no subido';
-    if(JSON.stringify(req.files) == '{}'){
-        return res.status(404).send({
-            status: 'error',
-            message: file_name
-        });	
-    }			
-    //Conseguir el nombre y la extensión del archivo
-    var file_path = req.files.file0.path;
-    var file_split = file_path.split('\\');
+async function uploadImages(req,res){
+    try {
+        let file_name = 'No upload';
+        let modelId = req.params.modelId;
 
-    //**Advertencia** En linux o Mac 
-    // --->   var file_split = file_path.split('/');
+        if(JSON.stringify(req.files) == '{}'){
+            return res.status(404).send({
+                status: 'error',
+                message: file_name
+            });	
+        }			
+        console.log(req.files.file0);
+        //Conseguir el nombre y la extensión del archivo
+        let file_path = req.files.file0.path;
+        
+        let file_split = file_path.split('\\');
 
-    //Nombre del archivo
-    var file_name = file_split[2];
+        //**Advertencia** En linux o Mac 
+        // --->   var file_split = file_path.split('/');
 
-    //Extensión del archivo
-    var ext_split = file_name.split('\.');
-    var file_ext = ext_split[1];
-    if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif') return messageError(res,300,'invalid extension');
+        //Nombre del archivo
+        file_name = file_split[2];
+
+        //Extensión del archivo
+        let ext_split = file_name.split('\.');
+        let file_ext = ext_split[1];
+
+        if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif'){
+            fs.unlink(file_path, (err) => {
+                return messageError(res, 300, 'Invalid Extension');
+            });
+                
+        }else{
+            
+            const modelBoot = await ModelBoot.findById(modelId);
+            if(modelBoot.images.length == 0){
+                modelBoot.mainImage = file_name;
+            }
+            modelBoot.images.push(file_name);            
+            const updatedModelBoot = await ModelBoot.findByIdAndUpdate(modelId,modelBoot,{new:true});
+            return res.status(200).send({
+                updatedModelBoot
+            });
+        }    
+    }catch(err){
+        
+        return messageError(res,500, 'Server error');
+    }
+}
+
+async function deleteUpload(req,res) {
+    try {   
+       let imageName = req.params.image;
+        let modelId = req.params.modelId;
+        let file_path = './uploads/models/' + imageName;
+        const modelBoot = await ModelBoot.findById(modelId);
+        if(!modelBoot) return messageError(res,300,'No model match');
+        let arrayTofilter = modelBoot.images;
+        let arrayFiltered = arrayTofilter.filter(element => element != imageName);
+        let imageExists = (arrayTofilter != arrayFiltered);
+        /*
+        let imageExists = false;
+        for(let image of modelBoot.images){
+            imageExists = (imageName == image);
+        }
+        */
+        
+        if(imageExists){
+            modelBoot.images = arrayFiltered;
+            const modelBootUpdated = await ModelBoot.findByIdAndUpdate(modelId,modelBoot, {new:true});
+            fs.unlink(file_path, (err) => {
+                return res.status(200).send({modelBootUpdated, file_path});
+            });
+            
+            
+        }
+    }catch(err){
+        console.log(err);
+        return messageError(res,300,'Server error');
+
+    }
+
     
 }
 
@@ -174,12 +237,17 @@ async function deleteModelBoot(req,res){
 }
 
 
-
 function getModelBootQuantity(req,res){
     let modelId = req.params.modelId;
-    findModelSizes(res, modelId, (sizes) => {
-        return res.status(200).send({sizes});
+    ModelBoot.findById(modelId,(err,modelBoot)=> {
+        if(err) return messageError(res,500,'Server error');
+
+        findModelSizes(res, modelId, (sizes) => {
+        
+            return res.status(200).send({sizes,modelBoot});
+        });
     });
+    
 }
 
 function getAllModels(req,res){
@@ -251,6 +319,8 @@ async function subtractModelBoot(req,res){
 module.exports = {
     saveModelBoot,
     updateModelBoot,
+    uploadImages,
+    deleteUpload,
     deleteModelBoot,
     getModelBootQuantity,
     getAllModels,
