@@ -1,6 +1,8 @@
 'use strict'
 var mongoosePaginate = require('mongoose-pagination');
 var fs= require('fs');
+const util = require('util');
+const unlink = util.promisify(fs.unlink);
 const modelBoot = require('../models/modelBoot');
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
@@ -45,7 +47,8 @@ function saveModelBoot(req,res){
                 }else{
                     if(sizesBootStored){
                         return res.status(200).send({
-                            sizesBootStored
+                            sizesBootStored,
+                            modelBootStored
                         });
                     }
                 }
@@ -146,41 +149,50 @@ async function uploadImages(req,res){
                 message: file_name
             });	
         }			
-        console.log(req.files.file0);
-        //Conseguir el nombre y la extensión del archivo
-        let file_path = req.files.file0.path;
         
-        let file_split = file_path.split('\\');
-
-        //**Advertencia** En linux o Mac 
-        // --->   var file_split = file_path.split('/');
-
-        //Nombre del archivo
-        file_name = file_split[2];
-
-        //Extensión del archivo
-        let ext_split = file_name.split('\.');
-        let file_ext = ext_split[1];
-
-        if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif'){
-            fs.unlink(file_path, (err) => {
-                return messageError(res, 300, 'Invalid Extension');
-            });
-                
+        let arrayUnlinked = [];
+        let arrayFiles = [];
+        if (req.files.file0.length == undefined){
+            arrayFiles.push(req.files.file0);
         }else{
-            
-            const modelBoot = await ModelBoot.findById(modelId);
-            if(modelBoot.images.length == 0){
-                modelBoot.mainImage = file_name;
+            arrayFiles = req.files.file0;
+        }   
+        const modelBoot = await ModelBoot.findById(modelId);
+        var updatedModelBoot = new ModelBoot();
+
+        for(let file of arrayFiles){
+            //Conseguir el nombre y la extensión del archivo
+            let file_path = file.path;
+            let file_split = file_path.split('\\');
+
+            //**Ansagee** linux oder Mac 
+            // --->   var file_split = file_path.split('/');
+            //Dateiname
+            file_name = file_split[2];
+
+            //Extensión del archivo
+            let ext_split = file_name.split('\.');
+            let file_ext = ext_split[1];
+            if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif' || !modelBoot){
+                const unlinked = await unlink(file_path);
+                arrayUnlinked.push(file_name);
+                
+                    
+            }else{                
+                if(modelBoot.images.length == 0){
+                    modelBoot.mainImage = file_name;
+                }
+                modelBoot.images.push(file_name);            
+                updatedModelBoot = await ModelBoot.findByIdAndUpdate(modelId,modelBoot,{new:true});
             }
-            modelBoot.images.push(file_name);            
-            const updatedModelBoot = await ModelBoot.findByIdAndUpdate(modelId,modelBoot,{new:true});
-            return res.status(200).send({
-                updatedModelBoot
-            });
-        }    
-    }catch(err){
+        }
+        return res.status(200).send({
+            updatedModelBoot,
+            arrayUnlinked
+        });
         
+    }catch(err){
+        console.log(err);
         return messageError(res,500, 'Server error');
     }
 }
@@ -195,13 +207,7 @@ async function deleteUpload(req,res) {
         let arrayTofilter = modelBoot.images;
         let arrayFiltered = arrayTofilter.filter(element => element != imageName);
         let imageExists = (arrayTofilter != arrayFiltered);
-        /*
-        let imageExists = false;
-        for(let image of modelBoot.images){
-            imageExists = (imageName == image);
-        }
-        */
-        
+                
         if(imageExists){
             modelBoot.images = arrayFiltered;
             const modelBootUpdated = await ModelBoot.findByIdAndUpdate(modelId,modelBoot, {new:true});
@@ -220,15 +226,57 @@ async function deleteUpload(req,res) {
     
 }
 
-async function deleteModelBoot(req,res){
+async function setMainImage(req, res){
     try{
         let modelId = req.params.modelId;
+        let fileName = req.params.image;
+        const modelBoot = await ModelBoot.findById(modelId);
+        console.log(modelBoot);
+        if(!modelBoot) return messageError(res,300,'Invalid modelId');
+        let includes = modelBoot.images.includes(fileName);
+        
+        if(includes){
+            let UploadObject= {mainImage: fileName};
+            let modelBootUpdated = await ModelBoot.findByIdAndUpdate(modelId, UploadObject, {new: true});
+            
+            return res.status(200).send({modelBootUpdated});
+        }else{
+            return messageError(res,300,'Invalid file name');
+        }
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Server error');
+    }
+}
+
+async function deleteModelBoot(req,res){
+    try{
+        const pathBase = './uploads/models/';
+        let modelId = req.params.modelId;
+
+        const modelToUnlink = await ModelBoot.findById(modelId);
+        let images = modelToUnlink.images;
+        console.log(images);
+        let unlinkedFiles = [];
+        for(let file of images){
+            let path = pathBase + file;
+            try{
+                const unlinked = await unlink(path);
+                
+            }catch (err){
+                
+            }
+            unlinked.push(file);
+            
+        }
         const modelDeleted = await ModelBoot.find({_id:modelId}).deleteOne();
         const sizesDeleted = await SizeBoot.find({modelBoot:modelId}).deleteMany();
 
+
         return res.status(200).send({
             modelDeleted,
-            sizesDeleted
+            sizesDeleted,
+            unlinkedFiles
         });
     }catch(err){
         console.log(err);
@@ -320,6 +368,7 @@ module.exports = {
     saveModelBoot,
     updateModelBoot,
     uploadImages,
+    setMainImage,
     deleteUpload,
     deleteModelBoot,
     getModelBootQuantity,
@@ -327,5 +376,6 @@ module.exports = {
     addModelBoot,
     subtractModelBoot
 }
+
 
 
