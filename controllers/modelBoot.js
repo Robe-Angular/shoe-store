@@ -3,7 +3,6 @@ var mongoosePaginate = require('mongoose-pagination');
 var fs= require('fs');
 const util = require('util');
 const unlink = util.promisify(fs.unlink);
-const modelBoot = require('../models/modelBoot');
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 const {messageError} = require('../services/constService');
@@ -27,6 +26,7 @@ function saveModelBoot(req,res){
     var modelBoot = new ModelBoot();
 
     modelBoot.description = params.description;
+    modelBoot.title = params.title;
     modelBoot.color = params.color;
     modelBoot.price = params.price;
 
@@ -75,9 +75,7 @@ async function updateModelBoot(req,res){
         const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
         
         if(minSizeBody > maxSizeBody) return messageError(res,300,'Min size is larger than Max size');
-        if(!modelUpdated) return messageError(res,300,'Model doesn´t exists');
-        console.log(minSizeBody > maxSizeBody);
-        
+        if(!modelUpdated) return messageError(res,300,'Model doesn´t exists');        
         const getMaxMin = (sizes) => {
             let minSize = 10000;
             let maxSize = 0;
@@ -151,20 +149,21 @@ async function uploadImages(req,res){
             message: file_name
         });	
     }			
-    
+    let reqFiles = req.files;
     let arrayUnlinked = [];
     let arrayFiles = [];
-    if (req.files.file0.length == undefined){
-        arrayFiles.push(req.files.file0);
-    }else{
-        arrayFiles = req.files.file0;
-    }
-    let modelBoot = null;   
+    
+    
     try {        
+        if (reqFiles.file0.length == undefined){
+            arrayFiles.push(reqFiles.file0);
+        }else{
+            arrayFiles = reqFiles.file0;
+        }
+        let modelBoot = null;   
         if(idValid){
             modelBoot = await ModelBoot.findById(modelId);
         }
-        console.log(modelBoot);
         var updatedModelBoot = new ModelBoot();
 
         for(let file of arrayFiles){
@@ -198,9 +197,24 @@ async function uploadImages(req,res){
             arrayUnlinked
         });        
         
-    }catch(err){
-        console.log(err);
-        return messageError(res,500, 'Server error');
+    }catch (err){
+        
+        const values = Object.values(reqFiles);    
+        console.log(values[0]);
+        for(let file of values[0]){
+            //Conseguir el nombre y la extensión del archivo
+            console.log(file);
+            let file_path = file.path;
+            let file_split = file_path.split('\\');
+            file_name = file_split[2];
+            let ext_split = file_name.split('\.');
+
+            const unlinked = await unlink(file_path);
+            arrayUnlinked.push(file_name);
+
+        }
+        
+        return messageError(res,500, 'Server error check input file as file0');
     }
 }
 
