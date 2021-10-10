@@ -139,25 +139,32 @@ async function updateModelBoot(req,res){
 }
 
 async function uploadImages(req,res){
-    try {
-        let file_name = 'No upload';
-        let modelId = req.params.modelId;
-
-        if(JSON.stringify(req.files) == '{}'){
-            return res.status(404).send({
-                status: 'error',
-                message: file_name
-            });	
-        }			
+    let file_name = 'No upload';
         
-        let arrayUnlinked = [];
-        let arrayFiles = [];
-        if (req.files.file0.length == undefined){
-            arrayFiles.push(req.files.file0);
-        }else{
-            arrayFiles = req.files.file0;
-        }   
-        const modelBoot = await ModelBoot.findById(modelId);
+    let modelId = req.params.modelId;
+    var validationRegex = new RegExp("^[0-9a-fA-F]{24}$");
+    let idValid = validationRegex.test(modelId); // false
+
+    if(JSON.stringify(req.files) == '{}'){
+        return res.status(404).send({
+            status: 'error',
+            message: file_name
+        });	
+    }			
+    
+    let arrayUnlinked = [];
+    let arrayFiles = [];
+    if (req.files.file0.length == undefined){
+        arrayFiles.push(req.files.file0);
+    }else{
+        arrayFiles = req.files.file0;
+    }
+    let modelBoot = null;   
+    try {        
+        if(idValid){
+            modelBoot = await ModelBoot.findById(modelId);
+        }
+        console.log(modelBoot);
         var updatedModelBoot = new ModelBoot();
 
         for(let file of arrayFiles){
@@ -173,7 +180,7 @@ async function uploadImages(req,res){
             //Extensión del archivo
             let ext_split = file_name.split('\.');
             let file_ext = ext_split[1];
-            if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif' || !modelBoot){
+            if(file_ext != 'png' && file_ext != 'jpg' && file_ext != 'jpeg' && file_ext != 'gif' || !modelBoot ||!idValid){
                 const unlinked = await unlink(file_path);
                 arrayUnlinked.push(file_name);
                 
@@ -189,7 +196,7 @@ async function uploadImages(req,res){
         return res.status(200).send({
             updatedModelBoot,
             arrayUnlinked
-        });
+        });        
         
     }catch(err){
         console.log(err);
@@ -266,7 +273,7 @@ async function deleteModelBoot(req,res){
             }catch (err){
                 
             }
-            unlinked.push(file);
+            unlinkedFiles.push(file);
             
         }
         const modelDeleted = await ModelBoot.find({_id:modelId}).deleteOne();
