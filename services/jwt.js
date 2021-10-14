@@ -1,7 +1,8 @@
 'use strict'
 var jwt = require('jwt-simple');
 var moment = require('moment');
-var secret = 'clave_secreta_de_uso_rudo'; //check middlewares
+var dotenv = require('dotenv').config();
+const secret = process.env.SECRET_JWT;
 
 exports.createToken = function(user){
     

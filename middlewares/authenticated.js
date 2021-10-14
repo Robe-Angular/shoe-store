@@ -2,7 +2,7 @@
 
 var jwt = require('jwt-simple');
 var moment = require('moment');
-var secret = 'clave_secreta_de_uso_rudo'; //check services
+const secret = process.env.SECRET_JWT;
 
 exports.ensureAuth = function(req,res,next){
     if(!req.headers.authorization){
