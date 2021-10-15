@@ -17,6 +17,16 @@ async function saveDiscount(req,res){
     }
 }
 
+async function updateDiscount(res,discountId,update){
+    try{
+        let discountUpdated = await Discount.findByIdAndUpdate(discountId,update,{new:true});
+        return res.status(200).send({discountUpdated});
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+
 async function booleanAppliedDiscount(req,res){
     try{
         let discountId = req.params.id;
@@ -25,24 +35,48 @@ async function booleanAppliedDiscount(req,res){
         appliedValue = (value == 'true')? true: false;
         let update = {
             applied: appliedValue
-        }        
-        let discountUpdated = await Discount.findByIdAndUpdate(discountId,update,{new:true});
-        return res.status(200).send({discountUpdated});
+        }    
+        return updateDiscount(res,discountId,update);
+        
     }catch(err){
         return messageError(res,500,'Server error');
     }
 }
-//async function deleteDiscount(req,res){
 
-//}
+async function updateTitleDescription(req,res){
+    try{
+        let discountId = req.params.id;
+        let titleBody = req.body.title;
+        let descriptionBody = req.body.description;
+        let update = {
+            title: titleBody,
+            description: descriptionBody 
+        }
+        return updateDiscount(res,discountId,update);
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+};
 
-//async function updateDiscount(req,res){
-    
-//}
+
+
+async function deleteDiscount(req,res){
+    try{
+        let discountId = req.params.id;
+        let deletedDiscount = await Discount.findByIdAndDelete(discountId);
+        return res.status(200).send(deletedDiscount);
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+
 
 
 
 module.exports = {
     saveDiscount,
-    booleanAppliedDiscount
+    booleanAppliedDiscount,
+    deleteDiscount,
+    updateTitleDescription
 }

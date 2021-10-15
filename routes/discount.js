@@ -8,4 +8,6 @@ var md_role = require('../middlewares/roleVerify');
 
 api.post('/saveDiscount', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,DiscountController.saveDiscount);
 api.put('/applied/:id', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,DiscountController.booleanAppliedDiscount);
+api.put('/updateDiscount/:id', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,DiscountController.updateTitleDescription);
+api.delete('/deleteDiscount/:id', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,DiscountController.deleteDiscount);
 module.exports = api;
