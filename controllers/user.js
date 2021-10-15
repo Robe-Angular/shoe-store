@@ -308,8 +308,7 @@ function recoverPasswordSubmit(req,res){
 
 function getUser(req,res){
     
-    var userId = req.params.id;
-    var userSessionId = req.user.sub;
+    var userId = req.params.userId;
     const findUser = () => {
         User.findById(userId, '-password', (err, user) => {
             if(err) return messageError(res,500, 'Request error');
