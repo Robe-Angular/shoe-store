@@ -8,4 +8,4 @@ var DiscountSchema = Schema({
     description:{type: String, default:''}
     });
 
-module.exports = mongoose.model('ConfirmationUpdateEmail', ConfirmationUpdateEmailSchema);
+module.exports = mongoose.model('Discount', DiscountSchema);
