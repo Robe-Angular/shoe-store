@@ -58,13 +58,20 @@ async function updateTitleDescription(req,res){
     }
 };
 
-
-
 async function deleteDiscount(req,res){
     try{
         let discountId = req.params.id;
         let deletedDiscount = await Discount.findByIdAndDelete(discountId);
         return res.status(200).send(deletedDiscount);
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+async function getDiscounts(req,res){
+    try{        
+        let discounts = await Discount.find();
+        return res.status(200).send(discounts);
     }catch(err){
         return messageError(res,500,'Server error');
     }
@@ -78,5 +85,6 @@ module.exports = {
     saveDiscount,
     booleanAppliedDiscount,
     deleteDiscount,
-    updateTitleDescription
+    updateTitleDescription,
+    getDiscounts
 }
