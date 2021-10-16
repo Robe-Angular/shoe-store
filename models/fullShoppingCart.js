@@ -4,8 +4,8 @@ var Schema = mongoose.Schema;
 
 var FullShoppingCartSchema = Schema({
     user:{type: Schema.ObjectId, ref: 'User'},    
-    originalPrice:{type: number, default:0},
-    priceDiscount:{type: number, default:0}
+    originalPrice:{type: Number, default:0},
+    priceDiscount:{type: Number, default:0}
 });
 
 module.exports = mongoose.model('FullShoppingCart', FullShoppingCartSchema);
