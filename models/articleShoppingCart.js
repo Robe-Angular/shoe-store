@@ -7,6 +7,7 @@ var ArticleShoppingCartSchema = Schema({
     fullShoppingCart:{type: Schema.ObjectId, ref: 'FullShoppingCart'},
     size:{type: Schema.ObjectId, default:'Size'},
     quantity:{type: Number, default:0}
+
 });
 
 module.exports = mongoose.model('ArticleShoppingCart', ArticleShoppingCartSchema);

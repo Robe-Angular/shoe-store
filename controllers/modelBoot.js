@@ -339,6 +339,7 @@ function getAllModels(req,res){
             return res.status(200).send({
                 modelBoots,
                 total,
+                page,
                 pages: Math.ceil(total / itemsPerPage)
             });
         }
