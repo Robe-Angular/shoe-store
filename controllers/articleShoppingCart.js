@@ -6,6 +6,8 @@ var Discount = require('../models/discount');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes,iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {Mayo} = require('../services/discountService');
+const fullShoppingCart = require('../models/fullShoppingCart');
+const { unsubscribe } = require('../routes/discount');
 
 
 
@@ -22,6 +24,20 @@ async function setTotalPrices(fullShoppingCartId){
         let MayoDiscountValue = await Mayo(fullShoppingCartId);
         totalPriceWithDiscount = (MayoDiscountFinded.applied) ? MayoDiscountValue:totalPrice;
         return {totalPrice,totalPriceWithDiscount};        
+    }catch(err){
+        console.log(err);
+    }
+}
+async function updateFullCart(prices,fullCartId){
+    try{
+        let updateFullCart = {
+            originalPrice: prices.totalPrice,
+            priceDiscount: prices.totalPriceWithDiscount
+        }
+        let updatedFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,updateFullCart,{new:true});
+        let itemsOnFullCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId});
+        return {updatedFullCart,itemsOnFullCart}
+
     }catch(err){
         console.log(err);
     }
@@ -70,12 +86,17 @@ async function saveOnCart(req,res){
         
         prices = await setTotalPrices(fullCartId);
         //Update full cart
+        /*
         let updateFullCart = {
             originalPrice: prices.totalPrice,
             priceDiscount: prices.totalPriceWithDiscount
         }
         let updatedFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,updateFullCart,{new:true});
         let itemsOnFullCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId});
+        */
+       let updateFullCartPrices = await updateFullCart(prices,fullCartId);
+       let updatedFullCart = updateFullCartPrices.updatedFullCart;
+       let itemsOnFullCart = updateFullCartPrices.itemsOnFullCart;
         return res.status(200).send({
             articleShoppingCartArray,
             updatedFullCart,
@@ -87,7 +108,62 @@ async function saveOnCart(req,res){
         return messageError(res,300,'Server Error');
     }
 }
+
+async function removeFullCartUser(req,res){
+    try{
+        let userId = req.user.sub;
+        let deletedFullCart = await FullShoppingCart.deleteMany({user:userId});
+        let deletedItemsCart = await ArticleShoppingCart.deleteMany({user:userId});
+        return res.status(200).send({
+            deletedFullCart,
+            deletedItemsCart
+        });
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+async function removeFullCartAdmin(req,res){
+    try{
+        let fullShoppingCartId = req.params.fullShoppingCartId;
+        let deletedFullCart = await FullShoppingCart.findByIdAndDelete(fullShoppingCartId);
+        let deletedItemsCart = await ArticleShoppingCart.deleteMany({fullShoppingCart:fullShoppingCartId});
+        return res.status(200).send({
+            deletedFullCart,
+            deletedItemsCart
+        });
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+async function removeItem(req,res){
+    try{
+        let userId = req.user.sub;
+        let modelId = req.params.modelId;
+        let deletedItems = await ArticleShoppingCart.deleteMany({user: userId, modelBoot:modelId});
+        let fullCart = await FullShoppingCart.findOne({user: userId});
+        let fullCartId = fullCart._id;
+        let prices = await setTotalPrices(fullCartId);
+        let updateFullCartPrices = await updateFullCart(prices,fullCartId);
+        let updatedFullCart = updateFullCartPrices.updatedFullCart;
+        let itemsOnFullCart = updateFullCartPrices.itemsOnFullCart;
+
+        return res.status(200).send({
+            deletedItems,
+            updatedFullCart,
+            itemsOnFullCart
+        });
+    }catch(err){
+        return messageError(res,500,'Server error');
+    }
+}
+
+
 module.exports = {
-    saveOnCart
+    saveOnCart,
+    removeFullCartAdmin,
+    removeFullCartUser,
+    removeItem
 }
 
