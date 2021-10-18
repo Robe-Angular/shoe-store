@@ -1,4 +1,3 @@
-const { deleteMany } = require('../models/articleShoppingCart');
 var ArticleShoppingCart = require('../models/articleShoppingCart');
 var FullShoppingCart = require('../models/fullShoppingCart');
 var SizeBoot = require('../models/sizeBoot');
@@ -6,11 +5,9 @@ var Discount = require('../models/discount');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes,iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {Mayo} = require('../services/discountService');
-const fullShoppingCart = require('../models/fullShoppingCart');
-const { unsubscribe } = require('../routes/discount');
+const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
-
-
+/*
 async function setTotalPrices(fullShoppingCartId){
     try{
         let totalPrice = 0;
@@ -42,6 +39,7 @@ async function updateFullCart(prices,fullCartId){
         console.log(err);
     }
 }
+*/
 
 async function saveOnCart(req,res){
     try{
@@ -84,19 +82,9 @@ async function saveOnCart(req,res){
         });              
 
         
-        prices = await setTotalPrices(fullCartId);
-        //Update full cart
-        /*
-        let updateFullCart = {
-            originalPrice: prices.totalPrice,
-            priceDiscount: prices.totalPriceWithDiscount
-        }
-        let updatedFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,updateFullCart,{new:true});
-        let itemsOnFullCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId});
-        */
-       let updateFullCartPrices = await updateFullCart(prices,fullCartId);
-       let updatedFullCart = updateFullCartPrices.updatedFullCart;
-       let itemsOnFullCart = updateFullCartPrices.itemsOnFullCart;
+        let functionUpdate = await setTotalPricesAndUpdate(fullCartId);
+        let updatedFullCart = functionUpdate.updatedFullCart;
+        let itemsOnFullCart = functionUpdate.itemsOnFullCart;
         return res.status(200).send({
             articleShoppingCartArray,
             updatedFullCart,
@@ -144,10 +132,9 @@ async function removeItem(req,res){
         let deletedItems = await ArticleShoppingCart.deleteMany({user: userId, modelBoot:modelId});
         let fullCart = await FullShoppingCart.findOne({user: userId});
         let fullCartId = fullCart._id;
-        let prices = await setTotalPrices(fullCartId);
-        let updateFullCartPrices = await updateFullCart(prices,fullCartId);
-        let updatedFullCart = updateFullCartPrices.updatedFullCart;
-        let itemsOnFullCart = updateFullCartPrices.itemsOnFullCart;
+        let functionUpdate = await setTotalPricesAndUpdate(fullCartId);
+        let updatedFullCart = functionUpdate.updatedFullCart;
+        let itemsOnFullCart = functionUpdate.itemsOnFullCart;
 
         return res.status(200).send({
             deletedItems,
