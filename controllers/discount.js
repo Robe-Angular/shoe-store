@@ -38,7 +38,7 @@ async function booleanAppliedDiscount(req,res){
         let update = {
             applied: appliedValue
         }    
-        
+        var allShoppingCart = await FullShoppingCart.find()
         
         return updateDiscount(res,discountId,update);
         
