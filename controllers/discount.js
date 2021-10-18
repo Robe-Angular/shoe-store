@@ -1,5 +1,7 @@
 var Discount = require('../models/discount');
+var FullShoppingCart = require('../models/fullShoppingCart');
 const {messageError} = require('../services/constService');
+const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
 async function saveDiscount(req,res){
     try{
@@ -36,6 +38,8 @@ async function booleanAppliedDiscount(req,res){
         let update = {
             applied: appliedValue
         }    
+        
+        
         return updateDiscount(res,discountId,update);
         
     }catch(err){
