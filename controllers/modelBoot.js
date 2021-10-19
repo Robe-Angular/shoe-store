@@ -5,9 +5,10 @@ const util = require('util');
 const unlink = util.promisify(fs.unlink);
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
+var ArticleShoppingCart = require('../models/articleShoppingCart');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes} = require('../services/modelBootService');
-
+const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
 
 
@@ -75,9 +76,27 @@ async function updateModelBoot(req,res){
             title: req.body.title,
             color: req.body.color,
         };
-        
+        const oldModel = await ModelBoot.findById(modelId);
         const modelUpdated = await ModelBoot.findByIdAndUpdate(modelId, fieldsUpdate,{new:true});
-        
+        if(oldModel.price != modelUpdated.price){
+            let articlesCartWithModel = await ArticleShoppingCart.find({modelBoot:modelId});
+            let fullCartIdArray = [];
+            for(let articleCart of articlesCartWithModel){
+                let articleFullCartString = articleCart.fullShoppingCart.toHexString();
+                let fullCartExists = false
+                for(let stringFullcart of fullCartIdArray){
+                    fullCartExists = stringFullcart == articleFullCartString;
+                }
+                if(!fullCartExists){
+                    fullCartIdArray.push(articleFullCartString);
+                }
+            }
+            for(let fullCartId of fullCartIdArray){
+                let updateFullCart = await setTotalPricesAndUpdate(fullCartId);
+            }
+
+        }
+
         if(minSizeBody > maxSizeBody) return messageError(res,300,'Min size is larger than Max size');
         if(!modelUpdated) return messageError(res,300,'Model doesn´t exists');        
         const getMaxMin = (sizes) => {

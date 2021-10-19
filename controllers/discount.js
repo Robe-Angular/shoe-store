@@ -2,6 +2,7 @@ var Discount = require('../models/discount');
 var FullShoppingCart = require('../models/fullShoppingCart');
 const {messageError} = require('../services/constService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+const fullShoppingCart = require('../models/fullShoppingCart');
 
 async function saveDiscount(req,res){
     try{
@@ -19,10 +20,10 @@ async function saveDiscount(req,res){
     }
 }
 
-async function updateDiscount(res,discountId,update){
+async function updateDiscount(discountId,update){
     try{
         let discountUpdated = await Discount.findByIdAndUpdate(discountId,update,{new:true});
-        return res.status(200).send({discountUpdated});
+        return discountUpdated;
     }catch(err){
         return messageError(res,500,'Server error');
     }
@@ -38,9 +39,21 @@ async function booleanAppliedDiscount(req,res){
         let update = {
             applied: appliedValue
         }    
-        var allShoppingCart = await FullShoppingCart.find()
+        let discountUpdated = await updateDiscount(discountId,update);
+        var allShoppingCart = await FullShoppingCart.find().select('id');
+        let updatedFullCartArray = [];
+        for(let fullShoppingCart of allShoppingCart){
+            let fullShoppingCartId = fullShoppingCart._id;
+            let fullShoppingCartUpdated = await setTotalPricesAndUpdate(fullShoppingCartId);
+            let updatedFullCart = fullShoppingCartUpdated.updatedFullCart;
+            updatedFullCartArray.push(updatedFullCart);
+        }
         
-        return updateDiscount(res,discountId,update);
+        
+        return res.status(200).send({
+            discountUpdated,
+            updatedFullCartArray
+        });
         
     }catch(err){
         return messageError(res,500,'Server error');
@@ -56,7 +69,10 @@ async function updateTitleDescription(req,res){
             title: titleBody,
             description: descriptionBody 
         }
-        return updateDiscount(res,discountId,update);
+        let discountUpdated = await updateDiscount(discountId,update);
+        return res.status(200).send({
+            discountUpdated
+        })
     }catch(err){
         return messageError(res,500,'Server error');
     }
