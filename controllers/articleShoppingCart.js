@@ -1,11 +1,10 @@
 var ArticleShoppingCart = require('../models/articleShoppingCart');
 var FullShoppingCart = require('../models/fullShoppingCart');
-var SizeBoot = require('../models/sizeBoot');
-var Discount = require('../models/discount');
 const {messageError} = require('../services/constService');
-const {iterateOverBodyValidSizes,iterateOverModelsOnFullCart} = require('../services/modelBootService');
-const {Mayo} = require('../services/discountService');
+const {iterateOverBodyValidSizes} = require('../services/modelBootService');
+const {createPaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+
 async function saveOnCart(req,res){
     try{
         let modelId = req.params.modelId;
@@ -111,11 +110,23 @@ async function removeItem(req,res){
     }
 }
 
+async function pay(req,res){
+    try{
+        let userId = req.user.sub;
+        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
+        let fullShoppingCartPrice = fullShoppingCart.priceDiscount;
+        await createPaypalOrder(fullShoppingCartPrice);
+    }catch(err){
+        console.log(err);
+    }
+}
+
 
 module.exports = {
     saveOnCart,
     removeFullCartAdmin,
     removeFullCartUser,
-    removeItem
+    removeItem,
+    pay
 }
 
