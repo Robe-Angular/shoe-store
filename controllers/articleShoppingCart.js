@@ -2,7 +2,7 @@ var ArticleShoppingCart = require('../models/articleShoppingCart');
 var FullShoppingCart = require('../models/fullShoppingCart');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes} = require('../services/modelBootService');
-const {createPaypalOrder} = require('../services/paypalService');
+const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
 async function saveOnCart(req,res){
@@ -117,7 +117,20 @@ async function pay(req,res){
         let fullShoppingCartPrice = fullShoppingCart.priceDiscount;
         await createPaypalOrder(fullShoppingCartPrice);
     }catch(err){
-        console.log(err);
+        return messageError(res,500,'Server error');
+    }
+}
+
+async function capture(req,res){
+    try{
+        let userId = req.user.sub;
+        let orderId = req.params.orderId;
+        await capturePaypalOrder(orderId);
+        return res.status(200).send({
+            orderId
+        })
+    }catch(err){
+        return messageError(res,500,'Server error');
     }
 }
 
@@ -127,6 +140,7 @@ module.exports = {
     removeFullCartAdmin,
     removeFullCartUser,
     removeItem,
-    pay
+    pay,
+    capture
 }
 
