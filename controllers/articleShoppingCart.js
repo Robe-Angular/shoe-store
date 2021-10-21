@@ -110,7 +110,7 @@ async function removeItem(req,res){
     }
 }
 
-async function pay(req,res){
+async function paypalCreate(req,res){
     try{
         let userId = req.user.sub;
         let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
@@ -121,7 +121,9 @@ async function pay(req,res){
     }
 }
 
-async function capture(req,res){
+
+
+async function paypalCapture(req,res){
     try{
         let userId = req.user.sub;
         let orderId = req.params.orderId;
@@ -132,6 +134,10 @@ async function capture(req,res){
     }catch(err){
         return messageError(res,500,'Server error');
     }
+}
+
+async function tryBuy(){
+    
 }
 
 
