@@ -13,7 +13,12 @@ const service ={
                 totalPrice += quantity * price;
             });
             let totalPriceWithDiscount = totalPrice;
-            
+            /*
+            *for 'Mayo' its:
+            *let ->Mayo<-DiscountFinded = await Discount.findOne({title:'->Mayo<-'});
+            *let ->Mayo<-DiscountValue = await ->Mayo<-(fullShoppingCartId); // Discount Service
+            *totalPriceWithDiscount = (->Mayo<-DiscountFinded.applied) ? ->Mayo<-DiscountValue:totalPrice;
+            */
             let MayoDiscountFinded = await Discount.findOne({title:'Mayo'});
             let MayoDiscountValue = await Mayo(fullShoppingCartId);
             totalPriceWithDiscount = (MayoDiscountFinded.applied) ? MayoDiscountValue:totalPrice;

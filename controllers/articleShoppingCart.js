@@ -1,9 +1,11 @@
 var ArticleShoppingCart = require('../models/articleShoppingCart');
 var FullShoppingCart = require('../models/fullShoppingCart');
+var SizeBoot = require('../models/sizeBoot');
 const {messageError} = require('../services/constService');
-const {iterateOverBodyValidSizes} = require('../services/modelBootService');
+const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+const articleShoppingCart = require('../models/articleShoppingCart');
 
 async function saveOnCart(req,res){
     try{
@@ -13,8 +15,7 @@ async function saveOnCart(req,res){
         let userId = req.user.sub;
 
         let deleteItemsUserModel = await ArticleShoppingCart.deleteMany({modelBoot: modelId,user:userId });
-        
-        let prices = {};
+
         let fullCartId = '';
         await iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
             let bodyValue = parseInt(body[keyElement]);
@@ -125,7 +126,6 @@ async function paypalCreate(req,res){
 
 async function paypalCapture(req,res){
     try{
-        let userId = req.user.sub;
         let orderId = req.params.orderId;
         await capturePaypalOrder(orderId);
         return res.status(200).send({
@@ -136,8 +136,33 @@ async function paypalCapture(req,res){
     }
 }
 
-async function tryBuy(){
-    
+async function tryBuy(req,res){
+    try{
+        let userId = req.user.sub;
+        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
+        let fullShoppingCartId = fullShoppingCart._id;
+        let articleShoppingCartArray = await ArticleShoppingCart.find({fullShoppingCart: fullShoppingCartId});
+        let insufficient = false;
+        for(let elementArticle of articleShoppingCartArray){
+            let elementArticleId = elementArticle._id;
+            let elementArticleSize = elementArticle.size;
+            let elementArticleQuantity = parseInt(elementArticle.quantity);
+            let sizeOnDB = await SizeBoot.findById(elementArticleSize);
+            let sizeStock = parseInt(sizeOnDB.quantity);
+            if(elementArticleQuantity > sizeStock){
+                insufficient = true;                
+                elementArticle.quantity = sizeStock;
+                let updateElementArticle = await findByIdAndUpdate(elementArticleId,elementArticle);
+            }
+        }
+        if(insufficient){
+
+        }else{
+            
+        }
+    }catch(err){
+        console.log(err)
+    }
 }
 
 
