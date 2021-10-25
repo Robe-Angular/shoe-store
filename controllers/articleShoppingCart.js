@@ -118,6 +118,7 @@ async function paypalCreate(req,res){
     try{
         let userId = req.user.sub;
         let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
+        if(!fullShoppingCart) return messageError(res,300,'No Cart yet');
         let fullShoppingCartPrice = fullShoppingCart.priceDiscount;
         
         let createOrder = await createPaypalOrder(fullShoppingCartPrice);
@@ -134,9 +135,9 @@ async function tryBuy(req,res){
         let orderId = req.params.orderId;
         
         let userId = req.user.sub;
-        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
+        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});        
+        if(!fullShoppingCart || fullShoppingCart.paypal != orderId) return messageError(res,300,'Paypal ID doesn\'t match');
         let fullShoppingCartId = fullShoppingCart._id;
-        if(fullShoppingCart.paypal != orderId) return messageError(res,300,'Paypal ID doesn\'t match');
         let articleShoppingCartArray = await ArticleShoppingCart.find({fullShoppingCart: fullShoppingCartId});
         let insufficient = false;
         for(let elementArticle of articleShoppingCartArray){
