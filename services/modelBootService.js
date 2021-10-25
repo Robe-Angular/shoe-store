@@ -46,6 +46,24 @@ const service ={
             await functionCallback(modelQuantity, modelPrice);
         }
         
+    },
+    addOrSubtractByBodyModelBoot: async(modelId,body,addOrSubtract) => {
+        try{           
+            let arraySizesStored = [];
+            await service.iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
+                let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[keyElement]);
+                let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[keyElement]);
+                let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
+                let sizeElementId = sizeElement._id;
+                const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
+                arraySizesStored.push(sizeUpdated);
+            });        
+            
+            return arraySizesStored;
+            
+        }catch(err){
+            console.log(err);
+        }
     }
 
 }

@@ -11,6 +11,6 @@ api.delete('/removeFullCartByUser', [md_auth.ensureAuth] ,ArticleShoppingCartCon
 api.delete('/removeFullCartByAdmin/:fullShoppingCartId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,ArticleShoppingCartController.removeFullCartAdmin);
 api.delete('/removeArticlesShoppingCart/:modelId', [md_auth.ensureAuth] ,ArticleShoppingCartController.removeItem);
 api.put('/paypalCreate', [md_auth.ensureAuth] ,ArticleShoppingCartController.paypalCreate);
-api.put('/paypalCapture/:orderId', [md_auth.ensureAuth] ,ArticleShoppingCartController.paypalCapture);
+api.put('/paypalCapture/:orderId', [md_auth.ensureAuth] ,ArticleShoppingCartController.tryBuy);
 
 module.exports = api;

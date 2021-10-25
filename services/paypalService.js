@@ -34,8 +34,10 @@ const service ={
                 
                 // If call returns body in response, you can get the deserialized version from the result attribute of the response.
                 console.log(response.result);
+                return response.result
             }
-            await createOrder();
+            let result =  await createOrder();
+            return result;
         }catch(err){
             console.log(err);
         }
@@ -48,12 +50,12 @@ const service ={
                 request.requestBody({});
                 // Call API with your client and get a response for your call
                 let response = await client.execute(request);
-                console.log(response);
                 // If call returns body in response, you can get the deserialized version from the result attribute of the response.
-                console.log(response.result);
+                
+                return response.result;
             }
-            await captureOrder(orderId);
-            return true;
+            let orderCaptured = await captureOrder(orderId);
+            return orderCaptured;
         }catch(err){
             return err;
         }

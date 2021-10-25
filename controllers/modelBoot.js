@@ -7,7 +7,7 @@ var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 var ArticleShoppingCart = require('../models/articleShoppingCart');
 const {messageError} = require('../services/constService');
-const {iterateOverBodyValidSizes} = require('../services/modelBootService');
+const {addOrSubtractByBodyModelBoot} = require('../services/modelBootService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
 
@@ -364,7 +364,7 @@ function getAllModels(req,res){
         }
     });
 }
-
+/*
 async function addOrSubtractModelBoot(modelId,body,addOrSubtract){
     
     try{           
@@ -377,57 +377,18 @@ async function addOrSubtractModelBoot(modelId,body,addOrSubtract){
             const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
             arraySizesStored.push(sizeUpdated);
         });        
-        console.log(arraySizesStored);
         
-        
-        /*
-        const voidIterate = await iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
-            let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[keyElement]);
-            let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[keyElement]);
-            let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
-            let sizeElementId = sizeElement._id;
-            const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
-            arraySizesStored.push(sizeUpdated);
-            console.log(arraySizesStored);
-        });
-        */
         return arraySizesStored;
         
     }catch(err){
-
+        console.log(err);
     }
-
-    /*
-    try{
-        const sizes = await SizeBoot.find({modelBoot:modelId});         
-        let arraySizesStored = [];
-        const keysBody = Object.keys(body);
-        for(const keyElement of keysBody){
-            let keySliced = parseInt(keyElement.slice(1));
-            for(let sizeElement of sizes){
-                if (sizeElement.size == keySliced){                             
-                    let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[keyElement]);
-                    let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[keyElement]);
-                    let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
-                    let sizeElementId = sizeElement._id;
-                    const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
-                    arraySizesStored.push(sizeUpdated);
-                }
-            }
-        }
-        return arraySizesStored;
-        
-    }catch(error){   
-        console.log(error);
-        return 'error';
-    }
-    */
 }
-
+*/
 async function addModelBoot(req,res){
     let modelId = req.params.modelId;
     let body = req.body;
-    let sizesStored = await addOrSubtractModelBoot(modelId,body,true);
+    let sizesStored = await addOrSubtractByBodyModelBoot(modelId,body,true);
     return res.status(200).send({
         sizesStored
     });
@@ -435,7 +396,7 @@ async function addModelBoot(req,res){
 async function subtractModelBoot(req,res){
     let modelId = req.params.modelId;
     let body = req.body;
-    let arraysStored = await addOrSubtractModelBoot(modelId,body,false);
+    let arraysStored = await addOrSubtractByBodyModelBoot(modelId,body,false);
     return res.status(200).send({
         arraysStored
     });
