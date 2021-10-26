@@ -1,14 +1,8 @@
 var bcrypt = require('bcryptjs');
 var dotenv = require('dotenv').config();
-var mongoose = require ('mongoose');
-
 const nodemailer = require('nodemailer');
-
-
 const hiddenUser = process.env.EMAIL_USER;
 const hiddenPassword = process.env.EMAIL_PASSWORD;
-
-
 var jwt = require('../services/jwt');
 
 var User = require('../models/user');

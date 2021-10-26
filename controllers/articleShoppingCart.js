@@ -7,8 +7,6 @@ const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
-const { findById } = require('../models/articleShoppingCart');
-
 
 async function saveOnCart(req,res){
     try{
@@ -62,6 +60,51 @@ async function saveOnCart(req,res){
     }catch(err){
         console.log(err);
         return messageError(res,300,'Server Error');
+    }
+}
+
+async function getArticlesShoppingCart(req,res){
+    try{
+        let page = 1;
+        let itemsPerPage = 4;
+        if(req.params.page){
+            page = req.params.page
+        }
+
+        let fullCartArray = await FullShoppingCart.find().paginate(page,itemsPerPage);
+        let total = await FullShoppingCart.count();
+        console.log(fullCartArray);
+        console.log(total);
+        let articlesMainArray = [];
+        for(let fullCartElement of fullCartArray){
+            let fullCartId = fullCartElement._id;
+            let articlesElementArray = await ArticleShoppingCart.find({fullShoppingCart: fullCartId});
+            articlesMainArray.push(articlesElementArray);
+        }
+        return res.status(200).send({
+            fullCartArray,
+            articlesMainArray,
+            page
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Server Error');
+    }
+}
+
+async function getArticleShoppingCart(req,res){
+    try{
+        let userId = req.params.userId
+        let fullCart = await FullShoppingCart.findOne({user:userId});       
+        let fullCartId = fullCart._id;
+        let articlesArray = await ArticleShoppingCart.find({fullShoppingCart: fullCartId});
+        return res.status(200).send({
+            fullCart,
+            articlesArray
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Server Error');
     }
 }
 
@@ -201,6 +244,8 @@ async function tryBuy(req,res){
 
 module.exports = {
     saveOnCart,
+    getArticlesShoppingCart,
+    getArticleShoppingCart,
     removeFullCartAdmin,
     removeFullCartUser,
     removeItem,
