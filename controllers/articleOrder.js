@@ -2,7 +2,7 @@ const {messageError} = require('../services/constService');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
 
-async function getArticleOrdersByParams(fields){
+async function getArticleOrdersByParams(fields,req){
     
     try{
         let mainOrders = [];
@@ -35,9 +35,26 @@ async function getArticleOrdersByParams(fields){
 }
 
 async function getArticleOrdersModelsUsers(req,res){
+    try{
+        let fields = {}
+        if(req.params.userId){
+            let fieldUser = req.params.userId;    
+            Object.assign(fields,{user: fieldUser})
+        }
+        
+        
+        if(req.params.user){
+            let fieldModel = req.params.modelBoot;
+            Object.assign(fields,{user: fieldModel})
+        }
+        
+        let articles = await getArticleOrdersByParams(fields,req);
+    }catch(err){
+        console.log(err);
+    }
 
 }
 
 module.exports = {
-    
+    getArticleOrdersModelsUsers
 }
