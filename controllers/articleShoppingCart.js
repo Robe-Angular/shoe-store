@@ -23,6 +23,9 @@ async function saveOnCart(req,res){
             let sizeId = sizeElement._id;
             let sizeQuantity = parseInt(sizeElement.quantity);
             let quantity = (bodyValue <= sizeQuantity) ? bodyValue : sizeQuantity;
+            if(bodyValue < 0) {
+                quantity = 0;
+            }
 
             let articleCart = new ArticleShoppingCart();
             articleCart.modelBoot = modelId;
@@ -73,18 +76,23 @@ async function getArticlesShoppingCart(req,res){
 
         let fullCartArray = await FullShoppingCart.find().paginate(page,itemsPerPage);
         let total = await FullShoppingCart.count();
-        console.log(fullCartArray);
-        console.log(total);
         let articlesMainArray = [];
         for(let fullCartElement of fullCartArray){
+            let articlesOnFullCart = {
+                fullCart: fullCartElement,
+                articles: []
+            }
             let fullCartId = fullCartElement._id;
             let articlesElementArray = await ArticleShoppingCart.find({fullShoppingCart: fullCartId});
-            articlesMainArray.push(articlesElementArray);
+            articlesOnFullCart.articles = articlesElementArray;
+            articlesMainArray.push(articlesOnFullCart);
         }
         return res.status(200).send({
             fullCartArray,
             articlesMainArray,
-            page
+            page,
+            total,
+            pages: Math.ceil(total / itemsPerPage)
         });
     }catch(err){
         console.log(err);
@@ -221,14 +229,18 @@ async function tryBuy(req,res){
                 articleOrder.fullOrder = createdFullOrder._id;
                 articleOrder.modelBoot = elementArticle.modelBoot;
                 articleOrder.size = elementArticle.size;
-                articleOrder.quantity = elementArticle.quantity;
-                let createdArticleOrder =await articleOrder.save();
-                articleOrderStored.push(createdArticleOrder);
+                let quantityInt = parseInt(elementArticle.quantity);
+                if(quantityInt > 0){
+                    articleOrder.quantity = elementArticle.quantity;
                 
-                let sizeToUpdate = await SizeBoot.findById(articleOrder.size);
-                let newQuantity = parseInt(sizeToUpdate.quantity) - articleOrder.quantity;
-                let updatedSize = await SizeBoot.findByIdAndUpdate(elementArticle.size,{quantity: newQuantity});                
-
+                    let createdArticleOrder =await articleOrder.save();
+                    articleOrderStored.push(createdArticleOrder);
+                    
+                    let sizeToUpdate = await SizeBoot.findById(articleOrder.size);
+                    let newQuantity = parseInt(sizeToUpdate.quantity) - articleOrder.quantity;
+                    let updatedSize = await SizeBoot.findByIdAndUpdate(elementArticle.size,{quantity: newQuantity});
+                }
+                
             }
             let deletedFullCart = await FullShoppingCart.deleteMany({user:userId});
             let deletedItemsCart = await ArticleShoppingCart.deleteMany({user:userId});
