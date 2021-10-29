@@ -11,7 +11,7 @@ async function getArticleOrdersByParams(fields,req){
         if(req.params.page){
             page = req.params.page
         }
-        let fullOrderArray = await FullOrder.find(fields).paginate(page,itemsPerPage);
+        let fullOrderArray = await FullOrder.find(fields).populate('modelBoot','title description price').paginate(page,itemsPerPage);
         let total = await FullOrder.count();
         for(let elementFullOrder of fullOrderArray){
             let articlesOrderInFullOrder = {
@@ -64,6 +64,7 @@ async function getArticleOrdersModelsUsers(req,res){
         }
         
         let articles = await getArticleOrdersByParams(fields,req);
+        return res.status(200).send({articles});
     }catch(err){
         console.log(err);
     }
