@@ -2,7 +2,7 @@ const {messageError} = require('../services/constService');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
 
-async function getArticleOrdersByParams(fields,req){
+async function getArticleOrdersByParams(fullOrderFields,articleOrderFields,req){
     
     try{
         let mainOrders = [];
@@ -11,17 +11,45 @@ async function getArticleOrdersByParams(fields,req){
         if(req.params.page){
             page = req.params.page
         }
-        let fullOrderArray = await FullOrder.find(fields).populate('modelBoot','title description price').paginate(page,itemsPerPage);
-        let total = await FullOrder.count();
+        
+        
+        let fullOrderArray = await FullOrder.find(fullOrderFields).select('_id');
+
+        console.log(fullOrderArray);
+        let objectsWithFullOrderKey = []
+        for(let idFullOrder of fullOrderArray){
+            let withFullOrderKey = {
+                fullOrder: idFullOrder._id
+            };
+            objectsWithFullOrderKey.push(withFullOrderKey);
+        }
+        console.log(articleOrderFields);
+        Object.assign(articleOrderFields,{$or: objectsWithFullOrderKey});
+
+        let articlesArray = await ArticleOrder.find({articleOrderFields})
+            .populate('user','name')
+            .populate('modelBoot','title description')
+            .populate('fullOrder');
+        
+        console.log(objectsWithFullOrderKey);
+
+        console.log(articlesArray);
+
+        
+        let total = await FullOrder.count(fullOrderFields);
+        console.log(total);
+        /*
         for(let elementFullOrder of fullOrderArray){
             let articlesOrderInFullOrder = {
                 fullOrder: elementFullOrder,
                 articleArray:[]
             }
-            let articlesOfFullOrder = await ArticleOrder.find({fullOrder: elementFullOrder._id});
+            Object.assign(articleOrderfields,{fullOrder: elementFullOrder._id});
+            let articlesOfFullOrder = await ArticleOrder.find(articleOrderfields).populate('size','size -_id').populate('modelBoot','title description -_id');
             articlesOrderInFullOrder.articleArray = articlesOfFullOrder;
             mainOrders.push(articlesOrderInFullOrder);
         }
+        */
         let responseObject = {
             articles: mainOrders,
             page,
@@ -36,34 +64,32 @@ async function getArticleOrdersByParams(fields,req){
 
 async function getArticleOrdersModelsUsers(req,res){
     try{
-        let fields = {}
+        let fullOrderFields = {}
+        let articleOrderFields = {}
+        if(req.params.modelBoot){
+            let fieldModel = req.params.modelBoot;
+            Object.assign(articleOrderFields,{modelBoot: fieldModel})
+        }
         if(req.params.userId){
             let fieldUser = req.params.userId;    
-            Object.assign(fields,{user: fieldUser})
+            Object.assign(fullOrderFields,{user: fieldUser})
         }
-        
-        
-        if(req.params.model){
-            let fieldModel = req.params.modelBoot;
-            Object.assign(fields,{model: fieldModel})
-        }
-
         if(req.params.sended){
             let fieldSended = false;
             if(req.params.sended == "sended"){
                 fieldSended = true;
             }
-            Object.assign(fields,{sended: fieldsended})
+            Object.assign(fullOrderFields,{sended: fieldsended})
         }
         if(req.params.received){
             let fieldReceived = false;
             if(req.params.received == "received"){
                 fieldReceived = true;
             }
-            Object.assign(fields,{received: fieldReceived})
+            Object.assign(fullOrderFields,{received: fieldReceived})
         }
         
-        let articles = await getArticleOrdersByParams(fields,req);
+        let articles = await getArticleOrdersByParams(fullOrderFields,articleOrderFields,req);
         return res.status(200).send({articles});
     }catch(err){
         console.log(err);

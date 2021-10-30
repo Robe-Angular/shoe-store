@@ -6,7 +6,7 @@ var ArticleOrderSchema = Schema({
     user:{type: Schema.ObjectId, ref: 'User'},
     fullOrder:{type: Schema.ObjectId, ref: 'FullOrder'},
     modelBoot: {type:Schema.ObjectId, ref:'ModelBoot'},
-    size:{type: Schema.ObjectId, default:'Size'},
+    size:{type: Schema.ObjectId, ref:'SizeBoot'},
     quantity:{type: Number, default:0}
 });
 
