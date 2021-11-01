@@ -353,7 +353,7 @@ function getUsers(req,res){
 function updateUser(req,res){
     const roundHash = 10;
     let BodyParams = req.body;
-    let userRequestId = req.params.UserId;
+    let userRequestId = req.params.userId;
     let userSessionId = req.user.sub;   
     
     let regexQueryEmail= regexLowerCase(BodyParams.email);
@@ -377,8 +377,9 @@ function updateUser(req,res){
         return messageError(res,300, 'No puedes actualizar el usuario');
     }
     if(BodyParams.email && BodyParams.nick){
-        user.email = BodyParams.email
-        user.nick = BodyParams.nick
+        user.email = BodyParams.email;
+        user.nick = BodyParams.nick;
+        user.telephone = BodyParams.telephon;
         User.find({ $or:[
             {email: regexQueryEmail},
             {nick: regexQueryNick}

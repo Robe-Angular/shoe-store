@@ -13,7 +13,7 @@ api.post('/reset', UserController.recoverPasswordSubmit);
 api.get('/user/:userId', [md_auth.ensureAuth, md_role.hasRoleOrUserReqParamsMatch(['ROLE_ADMIN'])] ,UserController.getUser);
 api.get('/users/:page?/:sort?', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])], UserController.getUsers);
 api.post('/confirm', UserController.verifyUser);
-api.put('/update/:UserId',md_auth.ensureAuth , UserController.updateUser);
+api.put('/update/:userId',md_auth.ensureAuth , UserController.updateUser);
 api.post('/changeEmail', md_auth.ensureAuth, UserController.updatingBecauseDiferentEmail);
 
 module.exports = api;

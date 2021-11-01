@@ -68,6 +68,7 @@ async function saveOnCart(req,res){
 
 async function getArticlesShoppingCart(req,res){
     try{
+        
         let page = 1;
         let itemsPerPage = 4;
         if(req.params.page){

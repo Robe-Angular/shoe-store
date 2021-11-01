@@ -1,61 +1,33 @@
 const {messageError} = require('../services/constService');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
+const { response } = require('express');
 
-async function getArticleOrdersByParams(fullOrderFields,articleOrderFields,req){
+async function getArticleOrdersByParams(articleOrderFields,req){
     
-    try{
-        let mainOrders = [];
+    try{        
         let page = 1;
         let itemsPerPage = 10;
-        if(req.params.page){
-            page = req.params.page
-        }
+        let params = req.params;
         
+        if(params.page){
+            page = params.page;
+        }        
         
-        let fullOrderArray = await FullOrder.find(fullOrderFields).select('_id');
-
-        console.log(fullOrderArray);
-        let objectsWithFullOrderKey = []
-        for(let idFullOrder of fullOrderArray){
-            let withFullOrderKey = {
-                fullOrder: idFullOrder._id
-            };
-            objectsWithFullOrderKey.push(withFullOrderKey);
-        }
-        console.log(articleOrderFields);
-        Object.assign(articleOrderFields,{$or: objectsWithFullOrderKey});
-
-        let articlesArray = await ArticleOrder.find({articleOrderFields})
+        let articlesArray = await ArticleOrder.find({$and:[articleOrderFields]})
             .populate('user','name')
             .populate('modelBoot','title description')
-            .populate('fullOrder');
+            .populate('fullOrder')
+            .paginate(page,itemsPerPage);
         
-        console.log(objectsWithFullOrderKey);
-
-        console.log(articlesArray);
-
-        
-        let total = await FullOrder.count(fullOrderFields);
-        console.log(total);
-        /*
-        for(let elementFullOrder of fullOrderArray){
-            let articlesOrderInFullOrder = {
-                fullOrder: elementFullOrder,
-                articleArray:[]
-            }
-            Object.assign(articleOrderfields,{fullOrder: elementFullOrder._id});
-            let articlesOfFullOrder = await ArticleOrder.find(articleOrderfields).populate('size','size -_id').populate('modelBoot','title description -_id');
-            articlesOrderInFullOrder.articleArray = articlesOfFullOrder;
-            mainOrders.push(articlesOrderInFullOrder);
-        }
-        */
+        let total = await ArticleOrder.count(articleOrderFields);
         let responseObject = {
-            articles: mainOrders,
+            articles: articlesArray,
             page,
             total,
             pages: Math.ceil(total / itemsPerPage)
         }
+        
         return responseObject;
     }catch(err){
         console.log(err);
@@ -72,7 +44,8 @@ async function getArticleOrdersModelsUsers(req,res){
         }
         if(req.params.userId){
             let fieldUser = req.params.userId;    
-            Object.assign(fullOrderFields,{user: fieldUser})
+            Object.assign(fullOrderFields,{user: fieldUser});
+            Object.assign(articleOrderFields,{user: fieldUser});
         }
         if(req.params.sended){
             let fieldSended = false;
@@ -89,12 +62,66 @@ async function getArticleOrdersModelsUsers(req,res){
             Object.assign(fullOrderFields,{received: fieldReceived})
         }
         
-        let articles = await getArticleOrdersByParams(fullOrderFields,articleOrderFields,req);
+        let articles = await getArticleOrdersByParams(articleOrderFields,req);
         return res.status(200).send({articles});
     }catch(err){
         console.log(err);
     }
 
+}
+async function getOrdersByParams(req,res){
+    try{
+        let fullOrderFields = {}
+        if(req.params.userId){
+            let fieldUser = req.params.userId;    
+            Object.assign(fullOrderFields,{user: fieldUser});
+        }
+        if(req.params.sended){
+            let fieldSended = false;
+            if(req.params.sended == "sended"){
+                fieldSended = true;
+            }
+            Object.assign(fullOrderFields,{sended: fieldSended})
+        }
+        if(req.params.received){
+            let fieldReceived = false;
+            if(req.params.received == "received"){
+                fieldReceived = true;
+            }
+            Object.assign(fullOrderFields,{received: fieldReceived})
+        }
+        let page = 1;
+
+        let itemsPerPage = 10;
+        let params = req.params;
+        
+        if(params.page){
+            page = params.page;
+        }
+        let ordersMatch = await FullOrder.find({$and:[fullOrderFields]}).paginate(page,itemsPerPage)
+            .populate('user','nick name email');
+        let total = await FullOrder.count({$and:[fullOrderFields]});
+        let responseObject = [];
+        for (let orderMatch of ordersMatch){
+            let responseObjectElement = {
+                fullOrder:orderMatch,
+                articles:[]
+            }
+            let articlesOfFullOrder = await ArticleOrder.find({fullOrder: orderMatch._id})
+            .populate('modelBoot','title description');
+            responseObjectElement.articles = articlesOfFullOrder;
+            responseObject.push(responseObjectElement);
+        }
+        return res.status(200).send({
+            responseObject,
+            page,
+            total,
+            pages: Math.ceil(total / itemsPerPage)
+        });
+        
+    }catch(err){
+        console.log(err);
+    }
 }
 
 async function setSended(req,res){
@@ -125,6 +152,7 @@ async function setReceived(req,res){
 
 module.exports = {
     getArticleOrdersModelsUsers,
+    getOrdersByParams,
     setSended,
     setReceived
 }

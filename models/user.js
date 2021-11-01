@@ -10,6 +10,7 @@ var UserSchema = Schema({
     role: {type: String, default:''},
     emailConfirmed: {type: Boolean, default:false},
     confirmationCode: {type: String, default: ''},
+    telephone: {type: String, default:''},
     createdAt:{type: Date, default: Date.now}
 });
 module.exports = mongoose.model('User', UserSchema)
