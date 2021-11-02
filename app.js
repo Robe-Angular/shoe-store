@@ -10,6 +10,7 @@ var modelBoot_routes = require('./routes/modelBoot');
 var discount_routes = require('./routes/discount');
 var articleShoppingCart_routes = require('./routes/articleShoppingCart');
 var articleOrder_routes = require('./routes/articleOrder');
+var address_routes = require('./routes/address');
 
 //middlewares
 app.use(bodyParser.urlencoded({extended: false}));
@@ -23,7 +24,7 @@ app.use('/api', modelBoot_routes);
 app.use('/api', discount_routes);
 app.use('/api', articleShoppingCart_routes);
 app.use('/api', articleOrder_routes);
-
+app.use('/api', address_routes);
 
 
 //export
