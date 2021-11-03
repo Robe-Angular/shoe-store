@@ -6,7 +6,8 @@ var FullShoppingCartSchema = Schema({
     user:{type: Schema.ObjectId, ref: 'User'},    
     originalPrice:{type: Number, default:0},
     priceDiscount:{type: Number, default:0},
-    paypal:{type: String, default:''}
+    paypalId:{type: String, default:''},
+    address:{type: Map, of: String}
 });
 
 module.exports = mongoose.model('FullShoppingCart', FullShoppingCartSchema);

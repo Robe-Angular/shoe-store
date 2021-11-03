@@ -3,6 +3,7 @@ var FullShoppingCart = require('../models/fullShoppingCart');
 var SizeBoot = require('../models/sizeBoot');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
+var address = require('../models/address');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
@@ -166,6 +167,12 @@ async function removeItem(req,res){
     }
 }
 
+async function saveAddressOnFullCart(req,res){
+    let userId = req.user.sub;
+    let addressId = req.params.addressId;
+    let fullCartToUpdate = await FullShoppingCart
+}
+
 async function paypalCreate(req,res){
     try{
         let userId = req.user.sub;
@@ -175,7 +182,7 @@ async function paypalCreate(req,res){
         
         let createOrder = await createPaypalOrder(fullShoppingCartPrice);
         let paypalId = createOrder.id;
-        let updateFullShoppingCart = await FullShoppingCart.findByIdAndUpdate(fullShoppingCart.id,{paypal:paypalId});
+        let updateFullShoppingCart = await FullShoppingCart.findByIdAndUpdate(fullShoppingCart.id,{paypalId:paypalId});
         return res.status(200).send({createOrder});
     }catch(err){
         return messageError(res,500,'Server error');
@@ -188,7 +195,7 @@ async function tryBuy(req,res){
         
         let userId = req.user.sub;
         let fullShoppingCart = await FullShoppingCart.findOne({user:userId});        
-        if(!fullShoppingCart || fullShoppingCart.paypal != orderId) return messageError(res,300,'Paypal ID doesn\'t match');
+        if(!fullShoppingCart || fullShoppingCart.paypalId != orderId) return messageError(res,300,'Paypal ID doesn\'t match');
         let fullShoppingCartId = fullShoppingCart._id;
         let articleShoppingCartArray = await ArticleShoppingCart.find({fullShoppingCart: fullShoppingCartId});
         let insufficient = false;
@@ -205,7 +212,7 @@ async function tryBuy(req,res){
             }
         }
         if(insufficient){
-            let updateFullCartPaypal = await FullShoppingCart.findByIdAndUpdate(fullShoppingCartId,{paypal:''});
+            let updateFullCartPaypal = await FullShoppingCart.findByIdAndUpdate(fullShoppingCartId,{paypalId:''});
             let updateFullCartPrice = await setTotalPricesAndUpdate(fullShoppingCartId);
             let updatedFullCart = updateFullCartPrice.updatedFullCart;
             let itemsOnFullCart = updateFullCartPrice.itemsOnFullCart;
