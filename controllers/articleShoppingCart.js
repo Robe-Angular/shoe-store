@@ -212,7 +212,8 @@ async function tryBuy(req,res){
         let orderId = req.params.orderId;
         
         let userId = req.user.sub;
-        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});        
+        let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
+        if(!fullShoppingCart.address) return messageError(res,300,'Address must be inserted');
         if(!fullShoppingCart || fullShoppingCart.paypalId != orderId) return messageError(res,300,'Paypal ID doesn\'t match');
         let fullShoppingCartId = fullShoppingCart._id;
         let articleShoppingCartArray = await ArticleShoppingCart.find({fullShoppingCart: fullShoppingCartId});
