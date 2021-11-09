@@ -2,6 +2,36 @@ const {messageError} = require('../services/constService');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
 
+async function getFullOrder(req,res){
+    try{
+        let fullOrderId = req.params.fullOrderId;
+        let userId = req.user.sub;
+        let userRole = req.user.role;
+        let fullOrder = {};
+        let articlesOrder = [];
+        if(userRole == 'ROLE_ADMIN'){
+            fullOrder = await FullOrder.findById(fullOrderId)
+            articlesOrder = await ArticleOrder.find({fullOrder:fullOrderId})
+            .populate('modelBoot','title description')
+            .populate('size', 'size');
+        }else{
+            fullOrder = await FullOrder.findOne({$and:[{_id:fullOrderId},{user:userId}]})
+            articlesOrder = await ArticleOrder.find({$and:[{fullOrder:fullOrderId},{user:userId}]})
+            .populate('modelBoot','title description')
+            .populate('size', 'size');
+        }
+        
+        return res.status(200).send({
+            fullOrder,
+            articlesOrder
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Server error');
+
+    }
+}
+
 async function getArticleOrdersByParams(articleOrderFields,req){
     
     try{        
@@ -150,6 +180,7 @@ async function setReceived(req,res){
 }
 
 module.exports = {
+    getFullOrder,
     getArticleOrdersModelsUsers,
     getOrdersByParams,
     setSended,

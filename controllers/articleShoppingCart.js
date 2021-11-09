@@ -3,7 +3,7 @@ var FullShoppingCart = require('../models/fullShoppingCart');
 var SizeBoot = require('../models/sizeBoot');
 var ArticleOrder = require('../models/ArticleOrder');
 var FullOrder = require('../models/FullOrder');
-var address = require('../models/address');
+var Address = require('../models/address');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
@@ -170,7 +170,25 @@ async function removeItem(req,res){
 async function saveAddressOnFullCart(req,res){
     let userId = req.user.sub;
     let addressId = req.params.addressId;
-    let fullCartToUpdate = await FullShoppingCart
+    
+    let address = await Address.findById(addressId);
+    if(address.user != userId ) return messageError(res,300,'No credentials');
+    let addressUpdate = {
+        completeName: address.completeName,
+        telephone: address.telephone,
+        street: address.street,
+        locality_2: address.locality_2,//Neighborhood, Quarter or Settlement
+        province_2: address.province_2,//Municipality
+        postalCode: address.postalCode,
+        locality_1: address.locality_1,//City
+        houseNumber: address.houseNumber,
+        province_1: address.province_1//State
+    }
+
+    let fullCartToUpdate = await FullShoppingCart.findOneAndUpdate({user : userId},{address: addressUpdate});
+    return res.status(200).send({
+        fullCartToUpdate
+    });
 }
 
 async function paypalCreate(req,res){
@@ -228,6 +246,7 @@ async function tryBuy(req,res){
             let fullOrder = new FullOrder();
             fullOrder.price = fullShoppingCart.priceDiscount;
             fullOrder.user = userId;
+            fullOrder.address = fullShoppingCart.address;
             let createdFullOrder = await fullOrder.save();
             let articleOrderStored = [];
 
@@ -269,6 +288,7 @@ module.exports = {
     removeFullCartAdmin,
     removeFullCartUser,
     removeItem,
+    saveAddressOnFullCart,
     paypalCreate,
     tryBuy
 }

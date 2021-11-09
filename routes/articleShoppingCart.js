@@ -12,6 +12,7 @@ api.get('/getArticleShoppingCartByUser/:userId', [md_auth.ensureAuth, md_role.ha
 api.delete('/removeFullCartByUser', [md_auth.ensureAuth] ,ArticleShoppingCartController.removeFullCartUser);
 api.delete('/removeFullCartByAdmin/:fullShoppingCartId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,ArticleShoppingCartController.removeFullCartAdmin);
 api.delete('/removeArticlesShoppingCart/:modelId', [md_auth.ensureAuth] ,ArticleShoppingCartController.removeItem);
+api.put('/saveAddress/:addressId', [md_auth.ensureAuth] ,ArticleShoppingCartController.saveAddressOnFullCart);
 api.put('/paypalCreate', [md_auth.ensureAuth] ,ArticleShoppingCartController.paypalCreate);
 api.put('/paypalCapture/:orderId', [md_auth.ensureAuth] ,ArticleShoppingCartController.tryBuy);
 
