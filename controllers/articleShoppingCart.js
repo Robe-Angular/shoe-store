@@ -185,7 +185,7 @@ async function saveAddressOnFullCart(req,res){
         province_1: address.province_1//State
     }
 
-    let fullCartToUpdate = await FullShoppingCart.findOneAndUpdate({user : userId},{address: addressUpdate});
+    let fullCartToUpdate = await FullShoppingCart.findOneAndUpdate({user : userId},{address: addressUpdate},{new:true});
     return res.status(200).send({
         fullCartToUpdate
     });

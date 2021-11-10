@@ -31,10 +31,13 @@ const service ={
         try{
             let updateFullCart = {
                 originalPrice: prices.totalPrice,
-                priceDiscount: prices.totalPriceWithDiscount
+                priceDiscount: prices.totalPriceWithDiscount,
+                paypalId:''
             }
             let updatedFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,updateFullCart,{new:true});
-            let itemsOnFullCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId});
+            let itemsOnFullCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId})
+            .populate('modelBoot','title description')
+            .populate('size','size');
             return {updatedFullCart,itemsOnFullCart}
     
         }catch(err){
