@@ -8,7 +8,8 @@ var ModelBootSchema = Schema({
     color: {type:String, default:''},
     price: {type: Number, default: 0},
     mainImage: {type: String, default: ''},
-    images: [String]
+    images: [String],
+    keyWords: [{type:Schema.ObjectId, ref:'KeyWord'}]
 });
 
 module.exports = mongoose.model('ModelBoot', ModelBootSchema);
