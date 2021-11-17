@@ -8,7 +8,7 @@ async function createKeyWord(req,res){
         let keyWordString = req.body.string;
         let keyWordToSave = new KeyWord();
         keyWordToSave.string = keyWordString;
-        let keyWord = keyWordToSave.save();
+        let keyWord = await keyWordToSave.save();
         return res.status(200).send({
             keyWord
         });
