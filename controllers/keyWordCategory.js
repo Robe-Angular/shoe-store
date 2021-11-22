@@ -22,10 +22,9 @@ async function saveKeyWordOnCategory(req,res){
         let categoryId = req.params.categoryId;
         let keyWordId = req.params.keyWordId;
         let categoryUpdated = await KeyWordCategory.findByIdAndUpdate(categoryId,{$addToSet: {keyWords:keyWordId}}, {new: true});
-        let keyWordUpdated = await KeyWord.findByIdAndUpdate(keyWordId,{$addToSet: {categories:categoryId}}, {new: true});
+        
         return res.status(200).send({
-            categoryUpdated,
-            keyWordUpdated
+            categoryUpdated        
         });
     }catch(err){
         console.log(err);

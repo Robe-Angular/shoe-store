@@ -1,14 +1,18 @@
 'use strict'
 var mongoosePaginate = require('mongoose-pagination');
+var mongoose = require('mongoose'); 
 var fs= require('fs');
 const util = require('util');
 const unlink = util.promisify(fs.unlink);
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 var ArticleShoppingCart = require('../models/articleShoppingCart');
+var KeyWord = require('../models/keyWord');
+var KeyWordCategory = require('../models/keyWordCategory');
 const {messageError} = require('../services/constService');
 const {addOrSubtractByBodyModelBoot} = require('../services/modelBootService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+
 
 
 
@@ -21,9 +25,6 @@ const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoo
         return messageError(res,300,'No sizes');
     }
 });
-
-
-
 
 function saveModelBoot(req,res){
 
@@ -364,27 +365,85 @@ function getAllModels(req,res){
         }
     });
 }
-/*
-async function addOrSubtractModelBoot(modelId,body,addOrSubtract){
-    
-    try{           
-        let arraySizesStored = [];
-        await iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
-            let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[keyElement]);
-            let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[keyElement]);
-            let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
-            let sizeElementId = sizeElement._id;
-            const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
-            arraySizesStored.push(sizeUpdated);
-        });        
-        
-        return arraySizesStored;
-        
+async function creatingSearchObject(array){
+    try{
+
     }catch(err){
-        console.log(err);
+
     }
 }
-*/
+async function getModelsByParams(req,res){
+    try{
+        let sizeToSearch = parseInt(req.body.size);
+        let keyWordsParams = req.params.keyWords.split(',');
+        let existingSizes = await SizeBoot.find({$and:[{quantity:{$gt:0}},{size:sizeToSearch}]});
+        let modelBootArrayWithSizes = [];
+        for(let size of existingSizes){
+            modelBootArrayWithSizes.push(size.modelBoot);
+        }
+        let keyWordsWith_KeyWord_Key = [];
+
+        
+        let modelsMatchingSize = await ModelBoot.find({
+                _id:{$in:modelBootArrayWithSizes}
+        });
+        let keyWordsMatchingModelsSizesParams = [];
+
+        for(let modelMatchingSize of modelsMatchingSize){
+            for(let keyWordOnModelMatchigSize of modelMatchingSize.keyWords){
+                let stringFromKeyWordObjectId = keyWordOnModelMatchigSize.toHexString();
+                keyWordsMatchingModelsSizesParams.indexOf(stringFromKeyWordObjectId) == -1 && keyWordsParams.indexOf(stringFromKeyWordObjectId) != -1  ? keyWordsMatchingModelsSizesParams.push(stringFromKeyWordObjectId) : void 0;
+            }
+        }//keyWordsModel and keyWordsParamsTogether
+
+
+        for(let keyWord of keyWordsMatchingModelsSizesParams){
+            let keyWordsWithKey = {
+                keyWords: keyWord
+            };
+            keyWordsWith_KeyWord_Key.push(keyWordsWithKey);
+        }
+
+        let keyWordCategoriesMatching = await KeyWordCategory.find({$or:keyWordsWith_KeyWord_Key});
+        console.log(keyWordCategoriesMatching);//find Categories with those Keywords that match size andReqParams
+
+        let keyWordAndSearchArray = [];// an $and for different Categories
+
+        for(let keyWordCategory of keyWordCategoriesMatching){
+            let keyWordOrSearchObject = {$or:[]};// keyWordOrSearchObject $or behavior on same category
+
+            for(let keyWord of keyWordsMatchingModelsSizesParams){
+                let keyWordWithKey = {
+                    keyWords: keyWord
+                };
+                if(keyWordCategory.keyWords == keyWord){
+                    keyWordOrSearchObject.$or.push(keyWordWithKey);
+                }
+            }
+            keyWordAndSearchArray.push(keyWordOrSearchObject);
+        }
+        console.log(keyWordAndSearchArray);
+        let modelsBootSizesKeyWords = await ModelBoot.find({
+            $and:[
+                {$and:keyWordAndSearchArray},
+                {_id:{$in:modelBootArrayWithSizes}}
+            ]
+        });
+        
+        return res.status(200).send({
+            modelBootArrayWithSizes,
+            modelsBootSizesKeyWords,
+            keyWordAndSearchArray
+        });
+
+    }
+    catch(err){
+        console.log(err);
+        return messageError(res,300,'Server error');
+    }
+    
+}
+
 async function addModelBoot(req,res){
     let modelId = req.params.modelId;
     let body = req.body;
@@ -393,6 +452,7 @@ async function addModelBoot(req,res){
         sizesStored
     });
 }
+
 async function subtractModelBoot(req,res){
     let modelId = req.params.modelId;
     let body = req.body;
@@ -411,8 +471,10 @@ module.exports = {
     deleteModelBoot,
     getModelBootQuantity,
     getAllModels,
+    getModelsByParams,
     addModelBoot,
     subtractModelBoot
+    
 }
 
 
