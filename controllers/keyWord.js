@@ -75,10 +75,26 @@ async function saveKeyWordOnModelBoot(req,res){
     }
     
 }
+async function deleteKeyWordOnModelBoot(req,res){
+    try{
+        let keyWordId = req.params.keyWordId;
+        let modelBootId = req.params.modelBootId;
+        let modelBoot = await ModelBoot.findByIdAndUpdate(modelBootId,{$pull:{keyWords:keyWordId}},{new: true});
+
+        return res.status(200).send({
+            modelBoot
+        });
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Server Error')
+    }
+    
+}
 
 module.exports = {
     createKeyWord,
     searchKeyWord,
     deleteKeyWord,
-    saveKeyWordOnModelBoot
+    saveKeyWordOnModelBoot,
+    deleteKeyWordOnModelBoot
 }

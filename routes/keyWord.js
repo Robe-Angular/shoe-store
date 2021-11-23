@@ -12,5 +12,6 @@ api.post('/createKeyWord', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])]
 api.post('/searchKeyWord', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.searchKeyWord);
 api.delete('/deleteKeyWord/:keyWordId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.deleteKeyWord);
 api.put('/saveKeyWordOnModelBoot/:keyWordId/:modelBootId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.saveKeyWordOnModelBoot);
+api.delete('/deleteKeyWordOnModelBoot/:keyWordId/:modelBootId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.deleteKeyWordOnModelBoot);
 
 module.exports = api;

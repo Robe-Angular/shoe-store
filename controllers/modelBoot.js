@@ -375,6 +375,9 @@ async function creatingSearchObject(array){
 async function getModelsByParams(req,res){
     try{
         let sizeToSearch = parseInt(req.body.size);
+        if(!sizeToSearch){
+            sizeToSearch = {$gte: 0};
+        }
         let keyWordsParams = req.params.keyWords.split(',');
         let existingSizes = await SizeBoot.find({$and:[{quantity:{$gt:0}},{size:sizeToSearch}]});
         let modelBootArrayWithSizes = [];
@@ -416,11 +419,14 @@ async function getModelsByParams(req,res){
                 let keyWordWithKey = {
                     keyWords: keyWord
                 };
-                if(keyWordCategory.keyWords == keyWord){
+                if(keyWordCategory.keyWords.indexOf(keyWord) != -1){
                     keyWordOrSearchObject.$or.push(keyWordWithKey);
                 }
             }
-            keyWordAndSearchArray.push(keyWordOrSearchObject);
+            if(keyWordOrSearchObject.$or.length > 0){
+                keyWordAndSearchArray.push(keyWordOrSearchObject);
+            }
+            
         }
         console.log(keyWordAndSearchArray);
         let modelsBootSizesKeyWords = await ModelBoot.find({
