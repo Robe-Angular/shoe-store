@@ -365,19 +365,19 @@ function getAllModels(req,res){
         }
     });
 }
-async function creatingSearchObject(array){
-    try{
-
-    }catch(err){
-
-    }
-}
 async function getModelsByParams(req,res){
     try{
+        let page = 1;
+        let itemsPerPage = 4;
+        if(req.params.page){
+            page = req.params.page
+        }
+
         let sizeToSearch = parseInt(req.body.size);
         if(!sizeToSearch){
             sizeToSearch = {$gte: 0};
         }
+        
         let keyWordsParams = req.params.keyWords.split(',');
         let existingSizes = await SizeBoot.find({$and:[{quantity:{$gt:0}},{size:sizeToSearch}]});
         let modelBootArrayWithSizes = [];
@@ -390,6 +390,9 @@ async function getModelsByParams(req,res){
         let modelsMatchingSize = await ModelBoot.find({
                 _id:{$in:modelBootArrayWithSizes}
         });
+
+        
+
         let keyWordsMatchingModelsSizesParams = [];
 
         for(let modelMatchingSize of modelsMatchingSize){
@@ -407,8 +410,15 @@ async function getModelsByParams(req,res){
             keyWordsWith_KeyWord_Key.push(keyWordsWithKey);
         }
 
-        let keyWordCategoriesMatching = await KeyWordCategory.find({$or:keyWordsWith_KeyWord_Key});
-        console.log(keyWordCategoriesMatching);//find Categories with those Keywords that match size andReqParams
+        let searchKeyWordCategories = {};
+        if(keyWordsWith_KeyWord_Key.length > 0){
+            searchKeyWordCategories = {
+                $or:keyWordsWith_KeyWord_Key
+            };
+        }
+
+        
+        let keyWordCategoriesMatching = await KeyWordCategory.find(searchKeyWordCategories);//find Categories with those Keywords that match size andReqParams
 
         let keyWordAndSearchArray = [];// an $and for different Categories
 
@@ -428,17 +438,29 @@ async function getModelsByParams(req,res){
             }
             
         }
-        console.log(keyWordAndSearchArray);
-        let modelsBootSizesKeyWords = await ModelBoot.find({
-            $and:[
-                {$and:keyWordAndSearchArray},
-                {_id:{$in:modelBootArrayWithSizes}}
-            ]
+
+        let searchSizesKeywords = {
+            $and:[]
+        }
+        searchSizesKeywords.$and.push({
+            _id:{$in:modelBootArrayWithSizes}
         });
+        if(keyWordAndSearchArray.length > 0){
+            searchSizesKeywords.$and.push({
+                $and:keyWordAndSearchArray
+            });
+        }
+        
+
+        let modelsBootSizesKeyWords = await ModelBoot.find(searchSizesKeywords).paginate(page, itemsPerPage);
+        let total = await ModelBoot.count(searchSizesKeywords);
         
         return res.status(200).send({
             modelBootArrayWithSizes,
             modelsBootSizesKeyWords,
+            total,
+            page,
+            pages: Math.ceil(total / itemsPerPage),
             keyWordAndSearchArray
         });
 
