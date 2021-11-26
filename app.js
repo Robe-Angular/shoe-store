@@ -13,6 +13,8 @@ var articleOrder_routes = require('./routes/articleOrder');
 var address_routes = require('./routes/address');
 var keyWordCategory_routes = require('./routes/keyWordCategory');
 var keyWord_routes = require('./routes/keyWord');
+var volumeWeight_routes = require('./routes/volumeWeight');
+
 
 
 //middlewares
@@ -30,7 +32,7 @@ app.use('/api', articleOrder_routes);
 app.use('/api', address_routes);
 app.use('/api', keyWordCategory_routes);
 app.use('/api', keyWord_routes);
-
+app.use('/api', volumeWeight_routes);
 
 //export
 module.exports = app;

@@ -1,8 +1,8 @@
 var ArticleShoppingCart = require('../models/articleShoppingCart');
 var FullShoppingCart = require('../models/fullShoppingCart');
 var SizeBoot = require('../models/sizeBoot');
-var ArticleOrder = require('../models/ArticleOrder');
-var FullOrder = require('../models/FullOrder');
+var ArticleOrder = require('../models/articleOrder');
+var FullOrder = require('../models/fullOrder');
 var Address = require('../models/address');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');

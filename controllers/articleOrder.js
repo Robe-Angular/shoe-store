@@ -1,6 +1,6 @@
 const {messageError} = require('../services/constService');
-var ArticleOrder = require('../models/ArticleOrder');
-var FullOrder = require('../models/FullOrder');
+var ArticleOrder = require('../models/articleOrder');
+var FullOrder = require('../models/fullOrder');
 
 async function getFullOrder(req,res){
     try{
