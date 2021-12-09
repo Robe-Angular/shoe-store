@@ -8,9 +8,8 @@ const service ={
             const sizes = await SizeBoot.find({modelBoot:modelId});                 
             const keysBody = Object.keys(body);
             for(const keyElement of keysBody){
-                let keySliced = parseInt(keyElement.slice(1));
                 for(let sizeElement of sizes){
-                    if (sizeElement.size == keySliced){                             
+                    if (sizeElement.size == keyElement){                             
                         await callbackIterate(sizeElement,keyElement); //Await Important! :o
                     }
                 }

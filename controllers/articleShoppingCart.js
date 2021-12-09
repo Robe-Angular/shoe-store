@@ -5,7 +5,7 @@ var ArticleOrder = require('../models/articleOrder');
 var FullOrder = require('../models/fullOrder');
 var Address = require('../models/address');
 const {messageError} = require('../services/constService');
-const {iterateOverBodyValidSizes, iterateOverModelsOnFullCart} = require('../services/modelBootService');
+const {iterateOverBodyValidSizes} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 

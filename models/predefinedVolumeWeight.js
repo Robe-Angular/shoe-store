@@ -4,7 +4,9 @@ var Schema = mongoose.Schema;
 
 var PredefinedVolumeWeightSchema = Schema({
     description: {type: String, default: '', unique: true},
-    volume:{type: Number, default: 0},
+    width:{type: Number, default: 0},
+    height:{type: Number, default: 0},
+    length:{type: Number, default: 0},
     weight:{type: Number, default: 0}
 });
 

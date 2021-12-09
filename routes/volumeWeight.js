@@ -7,5 +7,5 @@ var md_role = require('../middlewares/roleVerify');
 
 api.put('/createPredefinedVolumeWeight/:volume/:weight', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,ArticleOrderController.createPredefinedVolumeWeight);
 api.delete('/deletePredefinedVolumeWeight/:predefined_v_w_id', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,ArticleOrderController.deletePredefinedVolumeWeight);
-
+api.put('/insertVolumeWeight/:modelBootId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,ArticleOrderController.insertVoluemeWeightToSizes);
 module.exports = api;
