@@ -9,6 +9,11 @@ const {iterateOverBodyValidSizes} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
 
+const limitHeight = process.env.LIMIT_HEIGHT;
+const limitWidth = process.env.LIMIT_WIDTH;
+const limitLength = process.env.LIMIT_LENGTH;
+const limitVolume = process.env.LIMIT_VOLUME;
+
 async function saveOnCart(req,res){
     try{
         let modelId = req.params.modelId;
@@ -47,9 +52,58 @@ async function saveOnCart(req,res){
             }
 
             articleCart.fullShoppingCart = fullCartId;
-            let saveArticleOnCart = await articleCart.save();
+            let saveArticleOnCart = await articleCart.save();            
             articleShoppingCartArray.push(saveArticleOnCart);
+            //Checking Order Size
+            let articlesOnFullShoppingCart = ArticleShoppingCart.find({fullShoppingCart:fullCartId})
+                .populate('size','height width length');
+            let currentHeight = 0;
+            let currentWidth = 0;
+
+            let reseteableWidth = 0;
+            let greatherWidth = 0;
+            let currentLength = 0;
+
+            let reseteableHeight = 0;
+            let widthCol = 0;
+            let reseteableLength = 0;
+            
+            for(article of articlesOnFullShoppingCart){
+                let currentItems = article.quantity;
+
+                while(currentItems > 0){
+                    let itemsFitHeight = floor((limitHeight - reseteableHeight) / article.size.height);                    
+
+                    let articleItemsFit = currentItems > itemsFitHeight ? itemsFitHeight : currentItems;
+
+                    currentItems = currentItems - articleItemsFit;
+
+                    if(itemsFitHeight < 1){
+                        currentHeight = currentHeight > reseteableHeight ? currentHeight : reseteableHeight;
+                        reseteableHeight = 0;                               
+                        let widthPreMeasurement = reseteableWidth + widthCol;
+                        
+                        if(widthPreMeasurement < limitWidth){
+                            reseteableWidth = widthPreMeasurement;
+                        }else{
+                            currentWidth = currentWidth > reseteableWidth ? currentWidth : reseteableWidth;
+                            reseteableWidth = 0;                            
+                            currentLength += lengthRow;
+                        }
+                        
+                    }else{
+                        reseteableHeight += article.size.height * itemsFitHeight;
+                        widthCol = widthCol > article.size.width ? widthCol : article.size.width;
+                        lengthRow = lengthRow > article.size.length ? lengthRow : article.size.length;
+
+                    }
+                }
+                let volume = (currentHeight * currentWidth * currentLength)/5000;
+                console.log(currentHeight,currentWidth,currentLength,volume);
+
+            }
         });              
+        
 
         
         let functionUpdate = await setTotalPricesAndUpdate(fullCartId);
