@@ -4,14 +4,17 @@ var mongoose = require('mongoose');
 var fs= require('fs');
 const util = require('util');
 const unlink = util.promisify(fs.unlink);
+
 var ModelBoot = require('../models/modelBoot');
 var SizeBoot = require('../models/sizeBoot');
 var ArticleShoppingCart = require('../models/articleShoppingCart');
+var FullShoppingCart = require('../models/fullShoppingCart');
 var KeyWord = require('../models/keyWord');
 var KeyWordCategory = require('../models/keyWordCategory');
+
 const {messageError} = require('../services/constService');
 const {addOrSubtractByBodyModelBoot} = require('../services/modelBootService');
-const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+const {setTotalPriceAndUpdate} = require('../services/articleShoppingCartService');
 
 
 
@@ -93,7 +96,16 @@ async function updateModelBoot(req,res){
                 }
             }
             for(let fullCartId of fullCartIdArray){
-                let updateFullCart = await setTotalPricesAndUpdate(fullCartId);
+                /*
+                let fullCart = await FullShoppingCart.findById(fullCartId);
+                let packetSizes = {
+                    height: fullCart.height,
+                    width: fullCart.width,
+                    length:fullCart.length,
+                    weight:fullCart.weight
+                }
+                */                
+                let updateFullCart = await setTotalPriceAndUpdate(fullCartId);
             }
 
         }

@@ -78,6 +78,7 @@ async function updateAddress(req,res){
     try{
         let userId = req.user.sub;
         let addressId = req.params.addressId;
+        console.log(req.body);
         if( !req.body.completeName || !req.body.telephone || !req.body.street || !req.body.locality_2
             || !req.body.province_2 || !req.body.postalCode || !req.body.locality_1 || !req.body.houseNumber
             || !req.body.province_1) return messageError(res,300,'All fields must be filled');
@@ -94,6 +95,17 @@ async function updateAddress(req,res){
             houseNumber: req.body.houseNumber,
             province_1: req.body.province_1//State
         }
+        /*
+        "completeName": "req.body.completeName",
+        "telephone": req.body.telephone,
+        "street": req.body.street,
+        "locality_2": req.body.locality_2,//Neighborhood, Quarter or Settlement
+        "province_2": req.body.province_2,//Municipality
+        "postalCode": req.body.postalCode,
+        "locality_1": req.body.locality_1,//City
+        "houseNumber": req.body.houseNumber,
+        "province_1": req.body.province_1//State
+        */
         let updatedAddress = await Address.findOneAndUpdate({$and:[{user:userId},{_id:addressId}]},body, {new:true});
         return res.status(200).send({
             updatedAddress

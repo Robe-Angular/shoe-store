@@ -7,12 +7,10 @@ var Address = require('../models/address');
 const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
-const {setTotalPricesAndUpdate} = require('../services/articleShoppingCartService');
+const {setTotalPriceAndUpdate, setSizesPacket} = require('../services/articleShoppingCartService');
 
-const limitHeight = process.env.LIMIT_HEIGHT;
-const limitWidth = process.env.LIMIT_WIDTH;
-const limitLength = process.env.LIMIT_LENGTH;
-const limitVolume = process.env.LIMIT_VOLUME;
+
+
 
 async function saveOnCart(req,res){
     try{
@@ -24,7 +22,9 @@ async function saveOnCart(req,res){
         let deleteItemsUserModel = await ArticleShoppingCart.deleteMany({modelBoot: modelId,user:userId });
 
         let fullCartId = '';
+
         await iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
+            
             let bodyValue = parseInt(body[keyElement]);
             let sizeId = sizeElement._id;
             let sizeQuantity = parseInt(sizeElement.quantity);
@@ -42,6 +42,7 @@ async function saveOnCart(req,res){
 
             if(fullCartExists.length > 0){
                 fullCartId = fullCartExists[0]._id;
+                
 
             }else{                
                 
@@ -49,71 +50,128 @@ async function saveOnCart(req,res){
                 fullShoppingCart.user = userId;
                 let newFullCart = await fullShoppingCart.save();
                 fullCartId = newFullCart._id;
+                
             }
 
             articleCart.fullShoppingCart = fullCartId;
             let saveArticleOnCart = await articleCart.save();            
             articleShoppingCartArray.push(saveArticleOnCart);
-            //Checking Order Size
-            let articlesOnFullShoppingCart = ArticleShoppingCart.find({fullShoppingCart:fullCartId})
-                .populate('size','height width length');
-            let currentHeight = 0;
-            let currentWidth = 0;
+           
+        });              
+         
+        //Checking Order Size
+        /*
+        let articlesOnFullShoppingCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId})
+            .populate('size','weight height width length');
+        
+        let volume = 0;
+        let currentHeight = 0;
+        let currentWidth = 0;
 
-            let reseteableWidth = 0;
-            let greatherWidth = 0;
-            let currentLength = 0;
+        let reseteableWidth = 0;
+        let greatherWidth = 0;
+        let currentLength = 0;
 
-            let reseteableHeight = 0;
-            let widthCol = 0;
-            let reseteableLength = 0;
-            
-            for(article of articlesOnFullShoppingCart){
-                let currentItems = article.quantity;
+        let reseteableHeight = 0;
+        let widthCol = 0;
+        let lengthCol = 0;
 
-                while(currentItems > 0){
-                    let itemsFitHeight = floor((limitHeight - reseteableHeight) / article.size.height);                    
+        let reseteableLength = 0;
+        let columns = []
+        let arrayCounter = 0;
+        let totalWeight = 0;
+        //Columns
+        for(let article of articlesOnFullShoppingCart){
 
-                    let articleItemsFit = currentItems > itemsFitHeight ? itemsFitHeight : currentItems;
+            totalWeight += article.quantity * article.size.weight;
+            console.log(article.size.weight);
+            console.log(article.size.height);
+            console.log(article);
 
-                    currentItems = currentItems - articleItemsFit;
+            let currentItems = parseInt(article.quantity);
+            arrayCounter++;
+            while(currentItems > 0){
+                
+                let itemsFitHeight = Math.floor((limitHeight - reseteableHeight) / parseInt(article.size.height));                    
+                let articleItemsFit = currentItems > itemsFitHeight ? itemsFitHeight : currentItems;
+                currentItems = currentItems - articleItemsFit;
 
-                    if(itemsFitHeight < 1){
-                        currentHeight = currentHeight > reseteableHeight ? currentHeight : reseteableHeight;
-                        reseteableHeight = 0;                               
-                        let widthPreMeasurement = reseteableWidth + widthCol;
-                        
-                        if(widthPreMeasurement < limitWidth){
-                            reseteableWidth = widthPreMeasurement;
-                        }else{
-                            currentWidth = currentWidth > reseteableWidth ? currentWidth : reseteableWidth;
-                            reseteableWidth = 0;                            
-                            currentLength += lengthRow;
-                        }
-                        
-                    }else{
-                        reseteableHeight += article.size.height * itemsFitHeight;
-                        widthCol = widthCol > article.size.width ? widthCol : article.size.width;
-                        lengthRow = lengthRow > article.size.length ? lengthRow : article.size.length;
+                
+                if(itemsFitHeight < 1){
+                    let column =new Column(reseteableHeight,widthCol,lengthCol);
+                    widthCol = 0;
+                    lengthCol = 0;
+                    columns.push(column);
+                    reseteableHeight = 0;
+                }else{
+                    reseteableHeight += article.size.height * articleItemsFit;
+                    widthCol = widthCol > parseInt(article.size.width) ? widthCol : parseInt(article.size.width);
+                    lengthCol = lengthCol > parseInt(article.size.length) ? lengthCol : parseInt(article.size.length);
 
+                    if(arrayCounter == articlesOnFullShoppingCart.length && currentItems == 0 ){
+                        let column =new Column(reseteableHeight,widthCol,lengthCol);
+                        columns.push(column);
                     }
+                    
                 }
-                let volume = (currentHeight * currentWidth * currentLength)/5000;
-                console.log(currentHeight,currentWidth,currentLength,volume);
 
             }
-        });              
-        
+        }
+        console.log(columns);
+        let count = 0;
+        let lengthRow = 0;
+        for(let column of columns){
+            let columnHeight = column.getHeight();
+            let columnWidth = column.getWidth();
+            let columnLength = column.getLength();
 
+            lengthRow = count == 0 ? columnLength : lengthRow;
+            
+            count++;
+
+            currentHeight = currentHeight > columnHeight ? currentHeight : columnHeight;            
+            let widthPremeasurement = reseteableWidth + columnWidth;
+
+            if(widthPremeasurement >= limitWidth){
+                currentWidth = currentWidth > reseteableWidth ? currentWidth : reseteableWidth;
+                currentLength += lengthRow;
+                lengthRow = columnLength;
+                reseteableWidth = columnWidth;
+            }else{
+                //Last column
+                if(count == columns.length){
+                    currentWidth = widthPremeasurement;
+                    currentLength += lengthRow;
+                }
+                lengthRow = lengthRow > columnLength ? lengthRow:columnLength;
+                reseteableWidth = widthPremeasurement;
+            }
+            
+        }
+
+        volume = (currentHeight * currentWidth * currentLength)/5000;
+        let packetSizes = {
+            height: currentHeight,
+            width: currentWidth,
+            length:currentLength,
+            weight:totalWeight
+        }
         
-        let functionUpdate = await setTotalPricesAndUpdate(fullCartId);
+        console.log(currentHeight);
+        console.log(currentWidth);
+        console.log(currentLength);
+        console.log(volume);
+        console.log(totalWeight);
+        
+        */
+        let functionUpdate = await setTotalPriceAndUpdate(fullCartId);
+        let updateSizesPacket = await setSizesPacket(fullCartId);
         let updatedFullCart = functionUpdate.updatedFullCart;
         let itemsOnFullCart = functionUpdate.itemsOnFullCart;
         return res.status(200).send({
             articleShoppingCartArray,
             updatedFullCart,
-            itemsOnFullCart
-            
+            itemsOnFullCart            
         });
     }catch(err){
         console.log(err);
