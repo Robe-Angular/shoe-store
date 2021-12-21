@@ -98,7 +98,6 @@ const service ={
         for(let article of articlesOnFullShoppingCart){
 
             totalWeight += article.quantity * article.size.weight;
-            console.log(article);
 
             let currentItems = parseInt(article.quantity);
             arrayCounter++;
@@ -107,12 +106,6 @@ const service ={
                 let itemsFitHeight = Math.floor((limitHeight - reseteableHeight) / parseInt(article.size.height));                    
                 let articleItemsFit = currentItems > itemsFitHeight ? itemsFitHeight : currentItems;
                 currentItems = currentItems - articleItemsFit;
-                console.log('currentItems');
-                console.log(currentItems);
-                console.log('arrayCounter');
-                console.log(arrayCounter);
-                console.log('articlesOnFullShoppingCart.length');
-                console.log(articlesOnFullShoppingCart.length);
                 
                 if(itemsFitHeight < 1){
                     let column =new Column(reseteableHeight,widthCol,lengthCol);
@@ -126,6 +119,7 @@ const service ={
                     lengthCol = lengthCol > parseInt(article.size.length) ? lengthCol : parseInt(article.size.length);
 
                     if(arrayCounter == articlesOnFullShoppingCart.length && currentItems == 0 ){
+                        
                         let column =new Column(reseteableHeight,widthCol,lengthCol);
                         columns.push(column);
                     }
@@ -134,10 +128,9 @@ const service ={
 
             }
         }
-        console.log(columns);
-        console.log(columns.length);
         let count = 0;
         let lengthRow = 0;
+        console.log(columns);
         for(let column of columns){
             let columnHeight = column.getHeight();
             let columnWidth = column.getWidth();
@@ -146,7 +139,7 @@ const service ={
             lengthRow = count == 0 ? columnLength : lengthRow;
             
             count++;
-            console.log(count);
+            
 
             currentHeight = currentHeight > columnHeight ? currentHeight : columnHeight;            
             let widthPremeasurement = reseteableWidth + columnWidth;
@@ -154,7 +147,6 @@ const service ={
             if(widthPremeasurement >= limitWidth){
                 currentWidth = currentWidth > reseteableWidth ? currentWidth : reseteableWidth;
                 currentLength += lengthRow;
-                console.log('row');
                 lengthRow = columnLength;
                 
                 reseteableWidth = columnWidth;
@@ -164,8 +156,8 @@ const service ={
             }
 
             if(count == columns.length){
+                currentWidth = currentWidth == 0 ? reseteableWidth : currentWidth ;
                 currentLength += lengthRow;
-                console.log('finalRow');
             }                     
         }
 

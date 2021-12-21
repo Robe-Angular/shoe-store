@@ -1,6 +1,8 @@
 const {messageError} = require('../services/constService');
+const {setSizesPacket} = require('../services/articleShoppingCartService');
 var PredefinedVolumeWeight = require('../models/predefinedVolumeWeight');
 var SizeBoot = require('../models/sizeBoot');
+var ArticleShoppingCart = require('../models/articleShoppingCart');
 
 async function createPredefinedVolumeWeight(req,res){
     try{
@@ -42,9 +44,11 @@ async function insertVoluemeWeightToSizes(req,res){
         if(minSize > maxSize) return messageError(res,300,'minSize must be lower than maxSize');
         let sizes = await SizeBoot.find({modelBoot:modelBootId});
         let sizesUpdated = [];
+        let sizesId = []
         for(let sizeBoot of sizes){
             let sizeNumber = sizeBoot.size;
             let sizeId = sizeBoot._id;
+            sizesId.push(sizeId);
             if(sizeNumber >= minSize && sizeNumber <= maxSize){
                 let sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeId,{
                     width:width,
@@ -55,6 +59,21 @@ async function insertVoluemeWeightToSizes(req,res){
                 sizesUpdated.push(sizeUpdated);
             }
         }
+        let articlesShoppingCart = await ArticleShoppingCart.find({
+            size:{$in:sizesId}
+        });
+        console.log(articlesShoppingCart);
+        let fullShoppingCarts = []
+
+        for(let article of articlesShoppingCart){
+            let fullShoppingCartString = article.fullShoppingCart.toHexString();
+            if(fullShoppingCarts.indexOf(fullShoppingCartString) == -1){
+                setSizesPacket(article.fullShoppingCart);
+                fullShoppingCarts.push(fullShoppingCartString);
+            }
+            
+        }
+
         return res.status(200).send({
             sizesUpdated
         });
