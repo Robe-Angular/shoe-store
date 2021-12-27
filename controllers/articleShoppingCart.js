@@ -8,7 +8,12 @@ const {messageError} = require('../services/constService');
 const {iterateOverBodyValidSizes} = require('../services/modelBootService');
 const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalService');
 const {setTotalPriceAndUpdate, setSizesPacket} = require('../services/articleShoppingCartService');
+const skydropxService = require('../services/skydropxService');
 
+
+async function testingAxios(packetSizes,postalCode){
+    skydropxService.requestSkydropPrice(packetSizes, postalCode);
+}
 
 
 
@@ -59,113 +64,11 @@ async function saveOnCart(req,res){
            
         });              
          
-        //Checking Order Size
-        /*
-        let articlesOnFullShoppingCart = await ArticleShoppingCart.find({fullShoppingCart:fullCartId})
-            .populate('size','weight height width length');
-        
-        let volume = 0;
-        let currentHeight = 0;
-        let currentWidth = 0;
-
-        let reseteableWidth = 0;
-        let greatherWidth = 0;
-        let currentLength = 0;
-
-        let reseteableHeight = 0;
-        let widthCol = 0;
-        let lengthCol = 0;
-
-        let reseteableLength = 0;
-        let columns = []
-        let arrayCounter = 0;
-        let totalWeight = 0;
-        //Columns
-        for(let article of articlesOnFullShoppingCart){
-
-            totalWeight += article.quantity * article.size.weight;
-            console.log(article.size.weight);
-            console.log(article.size.height);
-            console.log(article);
-
-            let currentItems = parseInt(article.quantity);
-            arrayCounter++;
-            while(currentItems > 0){
-                
-                let itemsFitHeight = Math.floor((limitHeight - reseteableHeight) / parseInt(article.size.height));                    
-                let articleItemsFit = currentItems > itemsFitHeight ? itemsFitHeight : currentItems;
-                currentItems = currentItems - articleItemsFit;
-
-                
-                if(itemsFitHeight < 1){
-                    let column =new Column(reseteableHeight,widthCol,lengthCol);
-                    widthCol = 0;
-                    lengthCol = 0;
-                    columns.push(column);
-                    reseteableHeight = 0;
-                }else{
-                    reseteableHeight += article.size.height * articleItemsFit;
-                    widthCol = widthCol > parseInt(article.size.width) ? widthCol : parseInt(article.size.width);
-                    lengthCol = lengthCol > parseInt(article.size.length) ? lengthCol : parseInt(article.size.length);
-
-                    if(arrayCounter == articlesOnFullShoppingCart.length && currentItems == 0 ){
-                        let column =new Column(reseteableHeight,widthCol,lengthCol);
-                        columns.push(column);
-                    }
-                    
-                }
-
-            }
-        }
-        console.log(columns);
-        let count = 0;
-        let lengthRow = 0;
-        for(let column of columns){
-            let columnHeight = column.getHeight();
-            let columnWidth = column.getWidth();
-            let columnLength = column.getLength();
-
-            lengthRow = count == 0 ? columnLength : lengthRow;
-            
-            count++;
-
-            currentHeight = currentHeight > columnHeight ? currentHeight : columnHeight;            
-            let widthPremeasurement = reseteableWidth + columnWidth;
-
-            if(widthPremeasurement >= limitWidth){
-                currentWidth = currentWidth > reseteableWidth ? currentWidth : reseteableWidth;
-                currentLength += lengthRow;
-                lengthRow = columnLength;
-                reseteableWidth = columnWidth;
-            }else{
-                //Last column
-                if(count == columns.length){
-                    currentWidth = widthPremeasurement;
-                    currentLength += lengthRow;
-                }
-                lengthRow = lengthRow > columnLength ? lengthRow:columnLength;
-                reseteableWidth = widthPremeasurement;
-            }
-            
-        }
-
-        volume = (currentHeight * currentWidth * currentLength)/5000;
-        let packetSizes = {
-            height: currentHeight,
-            width: currentWidth,
-            length:currentLength,
-            weight:totalWeight
-        }
-        
-        console.log(currentHeight);
-        console.log(currentWidth);
-        console.log(currentLength);
-        console.log(volume);
-        console.log(totalWeight);
-        
-        */
         let functionUpdate = await setTotalPriceAndUpdate(fullCartId);
-        let updateSizesPacket = await setSizesPacket(fullCartId);
+        let updatedSizesPacket = await setSizesPacket(fullCartId);        
+        let postalCode = updatedSizesPacket.updatedFullCart.address.get('postalCode');
+        await skydropxService.requestSkydropPrice(updatedSizesPacket.packetSizes, postalCode);        
+
         let updatedFullCart = functionUpdate.updatedFullCart;
         let itemsOnFullCart = functionUpdate.itemsOnFullCart;
         return res.status(200).send({
@@ -265,7 +168,12 @@ async function removeItem(req,res){
         let deletedItems = await ArticleShoppingCart.deleteMany({user: userId, modelBoot:modelId});
         let fullCart = await FullShoppingCart.findOne({user: userId});
         let fullCartId = fullCart._id;
-        let functionUpdate = await setTotalPricesAndUpdate(fullCartId);
+
+        let functionUpdate = await setTotalPriceAndUpdate(fullCartId);
+        let updatedSizesPacket = await setSizesPacket(fullCartId);        
+        let postalCode = updatedSizesPacket.updatedFullCart.address.get('postalCode');
+        await skydropxService.requestSkydropPrice(updatedSizesPacket.packetSizes, postalCode);        
+
         let updatedFullCart = functionUpdate.updatedFullCart;
         let itemsOnFullCart = functionUpdate.itemsOnFullCart;
 
@@ -308,7 +216,7 @@ async function paypalCreate(req,res){
         let userId = req.user.sub;
         let fullShoppingCart = await FullShoppingCart.findOne({user:userId});
         if(!fullShoppingCart) return messageError(res,300,'No Cart yet');
-        let fullShoppingCartPrice = fullShoppingCart.priceDiscount;
+        let fullShoppingCartPrice = fullShoppingCart.originalPrice;
         
         let createOrder = await createPaypalOrder(fullShoppingCartPrice);
         let paypalId = createOrder.id;
@@ -344,7 +252,12 @@ async function tryBuy(req,res){
         }
         if(insufficient){
             let updateFullCartPaypal = await FullShoppingCart.findByIdAndUpdate(fullShoppingCartId,{paypalId:''});
-            let updateFullCartPrice = await setTotalPricesAndUpdate(fullShoppingCartId);
+
+            let updateFullCartPrice = await setTotalPriceAndUpdate(fullShoppingCartId);
+            let updatedSizesPacket = await setSizesPacket(fullCartId);        
+            let postalCode = updatedSizesPacket.updatedFullCart.address.get('postalCode');
+            await skydropxService.requestSkydropPrice(updatedSizesPacket.packetSizes, postalCode);        
+
             let updatedFullCart = updateFullCartPrice.updatedFullCart;
             let itemsOnFullCart = updateFullCartPrice.itemsOnFullCart;
             return res.status(300).send({
@@ -354,7 +267,6 @@ async function tryBuy(req,res){
             })
         }else{
             let captured = await capturePaypalOrder(orderId);
-            console.log(captured);
             if(captured.status != 'COMPLETED') return messageError(res,300,'Order not Approved');
             let fullOrder = new FullOrder();
             fullOrder.price = fullShoppingCart.priceDiscount;
@@ -395,6 +307,7 @@ async function tryBuy(req,res){
 
 
 module.exports = {
+    testingAxios,
     saveOnCart,
     getArticlesShoppingCart,
     getArticleShoppingCart,

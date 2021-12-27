@@ -15,5 +15,6 @@ api.delete('/removeArticlesShoppingCart/:modelId', [md_auth.ensureAuth] ,Article
 api.put('/saveAddress/:addressId', [md_auth.ensureAuth] ,ArticleShoppingCartController.saveAddressOnFullCart);
 api.put('/paypalCreate', [md_auth.ensureAuth] ,ArticleShoppingCartController.paypalCreate);
 api.put('/paypalCapture/:orderId', [md_auth.ensureAuth] ,ArticleShoppingCartController.tryBuy);
+api.post('/axios', [md_auth.ensureAuth] ,ArticleShoppingCartController.testingAxios);
 
 module.exports = api;

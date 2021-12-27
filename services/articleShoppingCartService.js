@@ -35,7 +35,7 @@ const service ={
             
             await iterateOverModelsOnFullCart(fullShoppingCartId,(quantity,price) => {
                 totalPrice += quantity * price;
-                console.log(totalPrice);
+                
             });            
             return totalPrice;        
         }catch(err){
@@ -130,7 +130,7 @@ const service ={
         }
         let count = 0;
         let lengthRow = 0;
-        console.log(columns);
+        
         for(let column of columns){
             let columnHeight = column.getHeight();
             let columnWidth = column.getWidth();
@@ -168,8 +168,12 @@ const service ={
             length:currentLength,
             weight:totalWeight
         }
-        let updateFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,packetSizes, {new:true});
-        return updateFullCart;
+        let updatedFullCart = await FullShoppingCart.findByIdAndUpdate(fullCartId,packetSizes, {new:true});
+        return {
+            updatedFullCart,
+            packetSizes
+        }
+            
         
     }
     
