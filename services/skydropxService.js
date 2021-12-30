@@ -9,7 +9,7 @@ const service = {
             let height = packetSizes.height;
             let width = packetSizes.width;
             let length = packetSizes.length;
-            await axios({
+            let skydropxResponse = await axios({
                 method:'post',
                 url: 'https://api.skydropx.com/v1/quotations',
                 data:{
@@ -27,12 +27,9 @@ const service = {
                     'Content-Type':'application/json'
                 }
                 
-            }).then( response => {
-                console.log(response.data);
-                console.log(response.config.data);
-            }).catch( err =>{
-                console.log(err);
             });
+            return skydropxResponse.data;                
+            
         }catch(err){
             console.log(err);
         }

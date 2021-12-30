@@ -5,12 +5,12 @@ const service ={
 
     iterateOverBodyValidSizes: async (modelId,body,callbackIterate) => {
         try{
-            const sizes = await SizeBoot.find({modelBoot:modelId});                 
+            const sizesDb = await SizeBoot.find({modelBoot:modelId});                 
             const keysBody = Object.keys(body);
             for(const keyElement of keysBody){
-                for(let sizeElement of sizes){
-                    if (sizeElement.size == keyElement){                             
-                        await callbackIterate(sizeElement,keyElement); //Await Important! :o
+                for(let sizeElementDb of sizesDb){
+                    if (sizeElementDb.size == keyElement){                             
+                        await callbackIterate(sizeElementDb,keyElement); //Await Important! :o
                     }
                 }
             }
