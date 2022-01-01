@@ -10,6 +10,7 @@ const {createPaypalOrder,capturePaypalOrder} = require('../services/paypalServic
 const {setTotalPriceAndUpdate, setSizesPacket} = require('../services/articleShoppingCartService');
 const skydropxService = require('../services/skydropxService');
 
+
 async function getSkydropAvailableServices(fullShoppingCart){
     try{
         let sizesObject = {
@@ -29,19 +30,19 @@ async function updateFullCart_SkydropRequest(fullCartId){
     try{
         let setPrice = await setTotalPriceAndUpdate(fullCartId);
         let updatedSizesPacket = await setSizesPacket(fullCartId);        
-        if(updatedSizesPacket.updatedFullCart.address == null){
-            console.log('null');
-        }
-        let postalCode = updatedSizesPacket.updatedFullCart.address.get('postalCode');
-        let skydropxServicesAvailable = await skydropxService.requestSkydropPrice(updatedSizesPacket.packetSizes, postalCode); 
         let articlesArray = setPrice.itemsOnFullCart;
-        console.log(skydropxServicesAvailable);
 
-        return {
-            articlesArray,
-            updatedSizesPacket,
-            skydropxServicesAvailable
-        }
+        if(updatedSizesPacket.updatedFullCart.address == null){            
+            return 'No address known';
+        }else{
+            let postalCode = updatedSizesPacket.updatedFullCart.address.get('postalCode');
+            let skydropxServicesAvailable = await skydropxService.requestSkydropPrice(updatedSizesPacket.packetSizes, postalCode);             
+            return {
+                articlesArray,
+                updatedSizesPacket,
+                skydropxServicesAvailable
+            }
+        }        
     }catch(err){
         console.log(err);
         return messageError(res,500,'Server error')
@@ -259,9 +260,8 @@ async function paypalCreate(req,res){
         let skydropxAvailableServices = await getSkydropAvailableServices(fullShoppingCart);
 
         if(skydropxAvailableServices.filter(obj => {
-            return obj.service_level_name == reqParService && obj.total_pricing == reqParamsPrice
-        }).length > 0){
-            
+            return obj.provider == reqParService && obj.total_pricing == reqParamsPrice
+        }).length > 0){            
             let priceSum = originalPrice + reqParamsPriceInt; //Adding shippingPrice to articles price
             let createOrder = await createPaypalOrder(priceSum);
             let paypalId = createOrder.id;
@@ -321,7 +321,7 @@ async function tryBuy(req,res){
             if(captured.status != 'COMPLETED') return messageError(res,300,'Order not Approved');
             let fullOrder = new FullOrder();
             fullOrder.price = fullShoppingCart.originalPrice;
-            fullOrder.shippingPrice = fullShoppingCart.shippingPrice;
+            fullOrder.priceShipping = fullShoppingCart.priceShipping;
             fullOrder.user = userId;
             fullOrder.address = fullShoppingCart.address;
             let createdFullOrder = await fullOrder.save();
