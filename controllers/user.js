@@ -379,7 +379,7 @@ function updateUser(req,res){
     if(BodyParams.email && BodyParams.nick){
         user.email = BodyParams.email;
         user.nick = BodyParams.nick;
-        user.telephone = BodyParams.telephon;
+        user.telephone = BodyParams.telephone;
         User.find({ $or:[
             {email: regexQueryEmail},
             {nick: regexQueryNick}
