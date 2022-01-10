@@ -82,7 +82,15 @@ function saveUser(req,res){
         }
 
         if(userExist){
-            return messageError(res,300, 'User already exists')
+            if(userExist.emailNotSended){
+                let confirmationCode = g_f_createCode();
+                bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
+                    User.findOneAndUpdate();
+                });
+            }else{
+                return messageError(res,300, 'User already exists')
+            }
+            
         }else{
             //encode password and save
             bcrypt.hash(params.password, roundHash, (err, hash) => {
@@ -101,8 +109,14 @@ function saveUser(req,res){
                         if(userStored){
     
                             userStored.password = undefined;
+                            try{
+                                sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode);
+                            }catch{
+                                User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
+                                    return messageError(res,500,'Error sending email');
+                                });
+                            }
                             
-                            sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode);
 
                             return res.status(200).send({
                                 userStored
