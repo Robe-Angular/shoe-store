@@ -85,7 +85,29 @@ function saveUser(req,res){
             if(userExist.emailNotSended){
                 let confirmationCode = g_f_createCode();
                 bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
-                    User.findOneAndUpdate();
+                    User.findOneAndUpdate({email:userExist.email},{confirmationCode:encryptedCode},{new:true},(err,userUpdated) => {
+                        if(err) return messageError(res, 500, 'Error at saving user')
+                        if(userUpdated){
+    
+                            userUpdated.password = undefined;
+                            sendConfirmationEmail(transport,hiddenUser,userUpdated.name, userUpdated.email, confirmationCode, (err,info) => {
+                                if(err){
+                                    console.log(err);
+                                    User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
+                                        
+                                        return messageError(res,500,'Error sending email');
+                                    });
+                                    
+                                }else{
+                                    User.findOneAndUpdate({email:user.email},{emailNotSended:false},(err,userUpdated)=> {
+                                        return res.status(200).send({
+                                            userUpdated
+                                        });
+                                    });
+                                }
+                            });                                    
+                        }
+                    });
                 });
             }else{
                 return messageError(res,300, 'User already exists')
@@ -106,21 +128,23 @@ function saveUser(req,res){
                     user.confirmationCode = encryptedCode;
                     user.save((err, userStored) => {
                         if(err) return messageError(res, 500, 'Error at saving user')
-                        if(userStored){
-    
+                        if(userStored){    
                             userStored.password = undefined;
-                            try{
-                                sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode);
-                            }catch{
-                                User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
-                                    return messageError(res,500,'Error sending email');
-                                });
-                            }
+                                sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode,(err,info) => {
+                                    if(err){
+                                        console.log(err);
+                                        User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
+                                            return messageError(res,500,'Error sending email');
+                                        });
+                                    }else{
+                                        return res.status(200).send({
+                                            userStored
+                                        });
+                                    }
+                                });                         
                             
 
-                            return res.status(200).send({
-                                userStored
-                            });
+                            
                         }
                     });                
                 });

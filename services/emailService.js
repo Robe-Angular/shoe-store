@@ -1,9 +1,9 @@
 const nodemailer = require('nodemailer');
+const { callbackPromise } = require('nodemailer/lib/shared');
 
 const service ={
     
     newTransport : (service, emailUser,emailPassword) => {
-        
         return nodemailer.createTransport({
             service: service,
             auth:{
@@ -13,18 +13,22 @@ const service ={
         });
     },
 
-    sendConfirmationEmail : (transport,senderEmail,receiverName, receiverEmail,confirmationCode) => {
-        transport.sendMail({
-            from: senderEmail,
-            to: receiverEmail,
-            subject: "Please confirm your count",
-            html: `
-                <h1>Email confirmation</h1>
-                <h2>Hello ${receiverName}</h2>
-                <p>Thanks for suscribing. Please confirm your email with te confirmation Code</p>
-                <p>${confirmationCode}</p>
-            `
-        });
+    sendConfirmationEmail : (transport,senderEmail,receiverName, receiverEmail,confirmationCode,callback) => {
+        
+            transport.sendMail({
+                from: senderEmail,
+                to: receiverEmail,
+                subject: "Please confirm your count",
+                html: `
+                    <h1>Email confirmation</h1>
+                    <h2>Hello ${receiverName}</h2>
+                    <p>Thanks for suscribing. Please confirm your email with te confirmation Code</p>
+                    <p>${confirmationCode}</p>
+                `
+            },(err,info) => {               
+                callback(err,info);
+            });
+        
     },
 
     sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,resetCode) => {
