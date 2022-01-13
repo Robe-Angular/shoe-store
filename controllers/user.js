@@ -81,38 +81,8 @@ function saveUser(req,res){
             return res.status(500).send({message:'Request error'});
         }
 
-        if(userExist){
-            if(userExist.emailNotSended){
-                let confirmationCode = g_f_createCode();
-                bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
-                    User.findOneAndUpdate({email:userExist.email},{confirmationCode:encryptedCode},{new:true},(err,userUpdated) => {
-                        if(err) return messageError(res, 500, 'Error at saving user')
-                        if(userUpdated){
-    
-                            userUpdated.password = undefined;
-                            sendConfirmationEmail(transport,hiddenUser,userUpdated.name, userUpdated.email, confirmationCode, (err,info) => {
-                                if(err){
-                                    console.log(err);
-                                    User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
-                                        
-                                        return messageError(res,500,'Error sending email');
-                                    });
-                                    
-                                }else{
-                                    User.findOneAndUpdate({email:user.email},{emailNotSended:false},(err,userUpdated)=> {
-                                        return res.status(200).send({
-                                            userUpdated
-                                        });
-                                    });
-                                }
-                            });                                    
-                        }
-                    });
-                });
-            }else{
-                return messageError(res,300, 'User already exists')
-            }
-            
+        if(userExist){        
+            return messageError(res,300, 'User already exists')
         }else{
             //encode password and save
             bcrypt.hash(params.password, roundHash, (err, hash) => {
@@ -133,18 +103,14 @@ function saveUser(req,res){
                                 sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode,(err,info) => {
                                     if(err){
                                         console.log(err);
-                                        User.findOneAndUpdate({email:user.email},{emailNotSended:true},(err,userUpdated)=> {
-                                            return messageError(res,500,'Error sending email');
-                                        });
+                                        return messageError(res,500,'Error sending email');
+                                        
                                     }else{
                                         return res.status(200).send({
                                             userStored
                                         });
                                     }
-                                });                         
-                            
-
-                            
+                                });           
                         }
                     });                
                 });
@@ -152,6 +118,35 @@ function saveUser(req,res){
         }
     });
 
+}
+
+async function tryConfirmationEmail(req, res){
+    try{
+        const roundHash = 8;
+        const roundHashVerification = 10;
+        var params = req.body;
+        var user = new User();
+        let confirmationCode = g_f_createCode();
+        bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
+            let userMatch = await User.findOneAndUpdate({email:params.email},{confirmationCode:encryptedCode},{new:true});
+            
+            userMatch.password = undefined;
+            sendConfirmationEmail(transport,hiddenUser,userMatch.name, userMatch.email, confirmationCode, (err,info) => {
+                if(err){
+                    console.log(err);                                        
+                    return messageError(res,500,'Error sending email');                 
+                }else{
+                    return res.status(200).send({
+                        userMatch
+                    });   
+                }
+            });                                    
+        });
+
+        
+    }catch(err){
+
+    }
 }
 
 function verifyUser(req, res){
