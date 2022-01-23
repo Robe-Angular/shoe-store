@@ -163,16 +163,20 @@ function verifyUser(req, res){
         if(err) return messageError(res, 500, 'Request error');
         if(user){
             bcrypt.compare(codeVerificationParams, user.confirmationCode, (err, match) => {
-                console.log(err);
-                if(err) return messageError(res,500,'Server Error');            
+                
+                if(err) return messageError(res,500,'Server Error');
+                
                 user.emailConfirmed = match;
                 user.confirmationCode = '';
                 if(user.emailConfirmed){
                     user.save(err => {
                         if(err){
+                            console.log(err);
                             return messageError(res, 500, 'Request error');
                         }else{
-                            user.password = undefined;
+                            if(user.password){
+                                user.password = undefined;
+                            }                            
                             return res.status(200).send({
                                 user
                             });
@@ -250,8 +254,13 @@ function recoverPasswordEmail(req,res){
                     if(err) return messageError(res,500,'Request error');
                     
                     if(recoverPasswordStored) {
-                        sendResetEmail(transport,hiddenUser,recoverUser.name,recoverUser.email,resetCode);
-                        return res.status(200).send({recoverPasswordStored});
+                        sendResetEmail(transport,hiddenUser,recoverUser.name,recoverUser.email,resetCode,(err,info) => {
+                            if (err){
+                                return messageError(res,500,'Error sending Email');
+                            }else{
+                                return res.status(200).send({recoverPasswordStored});
+                            }
+                        });
                     }
                 });
             }            
@@ -313,7 +322,9 @@ function recoverPasswordSubmit(req,res){
                 if(recoverPassword){
                     let recoverPasswordId = recoverPassword._id;
                     bcrypt.compare(recoveryPaswordCode, recoverPassword.recoverCode, (err, check) => {
-                        if(recoverPassword.user = user._id){
+                        if(err) return messageError(res,500,'Server error');
+
+                        if(recoverPassword.user = user._id && check){
                             userToUpdate = user;
                             bcrypt.hash(newPassword, roundHash, (err, hash) => {
                                 userToUpdate.password = hash;
@@ -334,7 +345,7 @@ function recoverPasswordSubmit(req,res){
                 }
             });
         }else{
-            return messageError(res,500,'No user found');
+            return messageError(res,300,'No user found');
         }
     });
 

@@ -31,7 +31,7 @@ const service ={
         
     },
 
-    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,resetCode) => {
+    sendResetEmail: (transport,senderEmail,receiverName, receiverEmail,resetCode, callback) => {
         transport.sendMail({
             from: senderEmail,
             to: receiverEmail,
@@ -45,6 +45,8 @@ const service ={
                 <p>Our store will never ask you for this code, we do not need that information</p>
                 <p>Nuestra tienda nunca te pedirá este código, no necesitamos esa información</p>
             `
+        },(err,info) => {
+            callback(err,info);
         });
     },
     sendConfirmationEmailOnUpdating : (transport,senderEmail,receiverName, receiverEmail,confirmationCode) => {
