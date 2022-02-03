@@ -505,6 +505,7 @@ function updatingBecauseDiferentEmail(req,res){
                         bcrypt.compare(passwordBody, user.password,(err,match) => {
                             
                             if(err) return messageError(res,500,'Server error');
+                            if(!match) return messageError(res,300,'No user match');
                             
                             let regexQueryEmail = regexLowerCase(confirmationUpdateEmail.email);
                             let regexQueryNick = regexLowerCase(confirmationUpdateEmail.nick);
