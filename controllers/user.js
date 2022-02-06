@@ -381,12 +381,15 @@ function getUsers(req,res){
             if(err) return messageError(res, 500,'Error en la petición');
             
             if(!users) {
+                
                 return messageError(res, 300, 'No users');
             }else{
-                if(users.length == 0){
+                if(users.length == 0){                    
                     return messageError(res,300,'No many users');
                 }else{
+                    console.log(page);
                     return res.status(200).send({
+                        page,
                         users,
                         total,
                         pages: Math.ceil(total / itemsPerPage)
@@ -559,9 +562,37 @@ function updatingBecauseDiferentEmail(req,res){
         }
     }); 
 }
+/*
+async function insertManyUsers(req,res){
+    try{
+        for(let i = 0; i < 100 ; i++){
+            let userSaved = await User.create(
+                {
 
+
+                    "nick" : "charley11" + i,
+                    "name" : "Carlos",
+                    "lastName" : "Sur",
+                    "email" : "carl11"+ i + "@carlos.com",
+                    "password" : "$2a$08$jlnzHxr9sZdZqDCcRVRbTesy7iIvex3wC5hhnec/tVecQd1YGjs3a",
+                    "role" : "ROLE_USER",
+                    "emailConfirmed" : true,
+                    "confirmationCode" : "$2a$10$v56UUTvvI6Lk8qr76xUr/una1sQR7gPSUK296GhSzJXMkVW/UqlgG",
+                
+                }
+            )
+        }
+        
+    }catch(err){
+        console.log(err);
+        return messageError(res,500,'Creation error')
+    }
+}
+*/
+//Insert users automatic
 
 module.exports = {
+
     saveUser,
     tryConfirmationEmail,
     verifyUser,
@@ -572,6 +603,7 @@ module.exports = {
     getUsers,
     updateUser,
     updatingBecauseDiferentEmail
+    //insertManyUsers <- used to create manyn users
 }
 
 

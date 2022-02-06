@@ -11,10 +11,12 @@ api.post('/login', UserController.loginUser);
 api.post('/recover', UserController.recoverPasswordEmail);
 api.post('/reset', UserController.recoverPasswordSubmit);
 api.get('/user/:userId', [md_auth.ensureAuth, md_role.hasRoleOrUserReqParamsMatch(['ROLE_ADMIN'])] ,UserController.getUser);
+
 api.get('/users/:page?/:sort?', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])], UserController.getUsers);
 api.post('/confirm', UserController.verifyUser);
 api.post('/trySendConfirmation', UserController.tryConfirmationEmail);
 api.put('/update/:userId',md_auth.ensureAuth , UserController.updateUser);
 api.post('/changeEmail', md_auth.ensureAuth, UserController.updatingBecauseDiferentEmail);
 
+//api.get('/insertManyUsers', UserController.insertManyUsers); <- used to create many users
 module.exports = api;
