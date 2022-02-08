@@ -377,7 +377,7 @@ function getUsers(req,res){
     if(sort == 'password' || sort == '-password'){
         return messageError(res,300,'Don\'t have credentials')
     }else{
-        User.find(null,'-password').sort(sort).paginate(page, itemsPerPage, (err, users, total) => {
+        User.find(null,'-password').collation({locale: "en" }).sort(sort).paginate(page, itemsPerPage, (err, users, total) => {
             if(err) return messageError(res, 500,'Error en la petición');
             
             if(!users) {
@@ -387,7 +387,6 @@ function getUsers(req,res){
                 if(users.length == 0){                    
                     return messageError(res,300,'No many users');
                 }else{
-                    console.log(page);
                     return res.status(200).send({
                         page,
                         users,
