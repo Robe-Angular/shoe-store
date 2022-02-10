@@ -27,7 +27,7 @@ const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoo
     }else{
         return messageError(res,300,'No sizes');
     }
-});
+});//Each size of each modelBoot
 
 function saveModelBoot(req,res){
 
@@ -52,7 +52,7 @@ function saveModelBoot(req,res){
             };
             SizeBoot.create(sizesBoot,(err, sizesBootStored) => {
                 if(err){
-                    return messageError(res,300,'Request error');
+                    return messageError(res,500,'Request error');
                 }else{
                     if(sizesBootStored){
                         return res.status(200).send({
