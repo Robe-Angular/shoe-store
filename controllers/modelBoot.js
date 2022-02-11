@@ -64,7 +64,7 @@ function saveModelBoot(req,res){
             });
         });
     }else{
-        return messageError(res,200,'Min size must be smaller');
+        return messageError(res,300,'Min size must be smaller');
     }
 }
 
