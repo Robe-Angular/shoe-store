@@ -19,5 +19,6 @@ api.get('/getModels/:page?/:sort?', ModelBootController.getAllModels);
 api.post('/addQuantity/:modelId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])],ModelBootController.addModelBoot);
 api.post('/subtractQuantity/:modelId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])],ModelBootController.subtractModelBoot);
 api.get('/getModelsByParams/:keyWords',ModelBootController.getModelsByParams);
+api.get('/getImageModelBoot/:imageFile', ModelBootController.getImageFile);
 
 module.exports = api;

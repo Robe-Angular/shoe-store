@@ -502,6 +502,19 @@ async function subtractModelBoot(req,res){
     });
 }
 
+async function getImageFile(req,res){
+    let imageFile = req.params.imageFile;
+    var pathFile =  './uploads/publications' + imageFile;
+
+    fs.exists(pathFile, exists => {
+        if(exists){
+            res.sendFile(path.resolve(pathFile));
+        }else{
+            return messageError(res, 300, 'No existe la imagen');
+        }
+    });
+}
+
 module.exports = {
     saveModelBoot,
     updateModelBoot,
@@ -513,7 +526,8 @@ module.exports = {
     getAllModels,
     getModelsByParams,
     addModelBoot,
-    subtractModelBoot
+    subtractModelBoot,
+    getImageFile
     
 }
 
