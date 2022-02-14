@@ -1,4 +1,5 @@
 'use strict'
+var path = require('path');
 var mongoosePaginate = require('mongoose-pagination');
 var mongoose = require('mongoose'); 
 var fs= require('fs');
@@ -504,12 +505,14 @@ async function subtractModelBoot(req,res){
 
 async function getImageFile(req,res){
     let imageFile = req.params.imageFile;
-    var pathFile =  './uploads/publications' + imageFile;
-
+    var pathFile =  './uploads/models/' + imageFile;
     fs.exists(pathFile, exists => {
         if(exists){
+            console.log('exists');
             res.sendFile(path.resolve(pathFile));
         }else{
+            console.log('no-exists');
+            console.log(pathFile);
             return messageError(res, 300, 'No existe la imagen');
         }
     });
