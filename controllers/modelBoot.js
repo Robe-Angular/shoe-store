@@ -504,18 +504,38 @@ async function subtractModelBoot(req,res){
 }
 
 async function getImageFile(req,res){
-    let imageFile = req.params.imageFile;
-    var pathFile =  './uploads/models/' + imageFile;
-    fs.exists(pathFile, exists => {
-        if(exists){
-            console.log('exists');
-            res.sendFile(path.resolve(pathFile));
-        }else{
-            console.log('no-exists');
-            console.log(pathFile);
-            return messageError(res, 300, 'No existe la imagen');
+    try{
+        let modelId = req.params.modelBoot;
+        let imageAndOptions = req.params.imageFile;
+        let splitPoint = imageAndOptions.split('.');//Separate first element of fileNAme
+        let splitHyphen = imageAndOptions.split('-');//Separate all words and the option is the last from front end if not 'view' is main
+        let option = splitHyphen[splitHyphen.length - 1];
+        let fileName = '';
+        if(!isNaN(option)){
+            let imageIndex = parseInt(isNumeric);
+
+        }else{  
+            let modelId = await ModelBoot.findById(modelId);
+            fileName = modelId.mainImage;
         }
-    });
+
+        var pathFile =  './uploads/models/' + fileName;
+        fs.exists(pathFile, exists => {
+            if(exists){
+                console.log('exists');
+                res.sendFile(path.resolve(pathFile));
+            }else{
+                console.log('no-exists');
+                console.log(pathFile);
+                return messageError(res, 300, 'No existe la imagen');
+            }
+        });
+    }catch (err){
+        console.log(err);
+        return messageError(res,500,'Server error');
+
+    }
+    
 }
 
 module.exports = {
