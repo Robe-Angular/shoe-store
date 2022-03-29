@@ -23,10 +23,10 @@ const service ={
                 to: receiverEmail,
                 subject: "Please confirm your count",
                 html: 
-                    "<h1>Email confirmation</h1>"+
-                    "<h2>Hello ${receiverName}</h2>"+
-                    "<p>Thanks for suscribing. Please confirm your email with te confirmation Code</p>"+
-                    "<p>${confirmationCode}</p>"
+                    `<h1>Email confirmation</h1>
+                    <h2>Hello ${receiverName}</h2>
+                    <p>Thanks for suscribing. Please confirm your email with te confirmation Code</p>
+                    <p>${confirmationCode}</p>`
                 
             },(err,info) => {               
                 callback(err,info);
