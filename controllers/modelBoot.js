@@ -44,6 +44,8 @@ function saveModelBoot(req,res){
     var maxSize = params.maxSize;
     if(minSize <= maxSize ){
         modelBoot.save((err, modelBootStored) => {
+            console.log(err);
+            if(err) return messageError(res,500,'Request error');
             let sizesBoot = [];
             for(let i = minSize; i<= maxSize;  i++){
                 let sizeBoot = new SizeBoot();
