@@ -18,18 +18,6 @@ const {addOrSubtractByBodyModelBoot} = require('../services/modelBootService');
 const {setTotalPriceAndUpdate} = require('../services/articleShoppingCartService');
 
 
-
-
-const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoot:modelId},(err,sizes) => {
-
-    if(err) return messageError(res,500,'Server error');
-    if(sizes.length > 0){
-        functionCallback(sizes);
-    }else{
-        return messageError(res,300,'No sizes');
-    }
-});//Each size of each modelBoot
-
 function saveModelBoot(req,res){
 
     var params = req.body;
@@ -75,6 +63,9 @@ async function updateModelBoot(req,res){
     try{
         let minSizeBody = parseInt(req.body.minSize);
         let maxSizeBody = parseInt(req.body.maxSize);
+        //console.log(minSizeBody);
+        //console.log(maxSizeBody);
+        
         let modelId = req.params.modelId;
         
         let fieldsUpdate={
@@ -129,8 +120,6 @@ async function updateModelBoot(req,res){
         const sizesDB = await SizeBoot.find({modelBoot:modelId});
         
         let maxMinDB = getMaxMin(sizesDB);
-        
-        
         let maxDB = maxMinDB[0];
         let minDB = maxMinDB[1];
         
@@ -171,7 +160,7 @@ async function updateModelBoot(req,res){
         });
     }catch(err){
         console.log(err);
-        return messageError(res,200,'Server error');
+        return messageError(res,500,'Server error');
     }
 }
 
@@ -191,25 +180,56 @@ async function uploadImages(req,res){
     let reqFiles = req.files;
     let arrayUnlinked = [];
     let arrayFiles = [];
+    console.log(reqFiles);
     
-    
-    try {        
-        if (reqFiles.file0.length == undefined){
-            arrayFiles.push(reqFiles.file0);
+    try { 
+        /*       
+        if (reqFiles.length == undefined){
+            arrayFiles.push(reqFiles);
         }else{
-            arrayFiles = reqFiles.file0;
+            arrayFiles = reqFiles;
         }
+        {
+            Ackerman: {
+                jpg: {
+                fieldName: 'Ackerman.jpg',
+                originalFilename: 'Ackerman.jpg',
+                path: 'uploads\\models\\sAzJeB1Y40VHbC6FbGGk4QDm.jpg',
+                headers: [Object],
+                size: 4155,
+                name: 'Ackerman.jpg',
+                type: 'image/jpeg'
+                }
+            },
+            AMLO: {
+                jpg: {
+                fieldName: 'AMLO.jpg',
+                originalFilename: 'AMLO.jpg',
+                path: 'uploads\\models\\PxxO2Imtw7bLyr5jjbHRzRMo.jpg',
+                headers: [Object],
+                size: 21180,
+                name: 'AMLO.jpg',
+                type: 'image/jpeg'
+                }
+            }
+        }        
+        */
         let modelBoot = null;   
         if(idValid){
             modelBoot = await ModelBoot.findById(modelId);
         }
+        
         var updatedModelBoot = new ModelBoot();
+        
+        let parseArrayReqFiles = Object.values(reqFiles)//Object.values(). El método Object.values() devuelve un array con los valores correspondientes a las propiedades enumerables de un objeto.
 
-        for(let file of arrayFiles){
+        for(let file of parseArrayReqFiles){
+            console.log(file);
             //Conseguir el nombre y la extensión del archivo
-            let file_path = file.path;
+            let file_path = file[Object.keys(file)[0]].path;
+            
+            //let file_path = file.path;                //Changed due different Organization
             let file_split = file_path.split('\\');
-
             //**Ansagee** linux oder Mac 
             // --->   var file_split = file_path.split('/');
             //Dateiname
@@ -239,17 +259,23 @@ async function uploadImages(req,res){
     }catch (err){
         
         const values = Object.values(reqFiles);    
-        console.log(values[0]);
-        for(let file of values[0]){
+        //console.log(values[0]);
+        for(let file of values){
             //Conseguir el nombre y la extensión del archivo
-            console.log(file);
-            let file_path = file.path;
+            //console.log(file);
+            
+            let file_path = file[Object.keys(file)[0]].path;
+            //let file_path = file.path;                //Changed due different Organization
+
+            //console.log(file_path);
+
             let file_split = file_path.split('\\');
             file_name = file_split[2];
             let ext_split = file_name.split('\.');
 
             const unlinked = await unlink(file_path);
             arrayUnlinked.push(file_name);
+            console.log(err);
 
         }
         
@@ -291,7 +317,7 @@ async function setMainImage(req, res){
         let modelId = req.params.modelId;
         let fileName = req.params.image;
         const modelBoot = await ModelBoot.findById(modelId);
-        console.log(modelBoot);
+        //console.log(modelBoot);
         if(!modelBoot) return messageError(res,300,'Invalid modelId');
         let includes = modelBoot.images.includes(fileName);
         
@@ -316,7 +342,7 @@ async function deleteModelBoot(req,res){
 
         const modelToUnlink = await ModelBoot.findById(modelId);
         let images = modelToUnlink.images;
-        console.log(images);
+        //console.log(images);
         let unlinkedFiles = [];
         for(let file of images){
             let path = pathBase + file;
@@ -340,10 +366,19 @@ async function deleteModelBoot(req,res){
         });
     }catch(err){
         console.log(err);
-        return messageError(res,200,'Server error');
+        return messageError(res,500,'Server error');
     }
 }
 
+const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoot:modelId},(err,sizes) => {
+
+    if(err) return messageError(res,500,'Server error');
+    if(sizes.length > 0){
+        functionCallback(sizes);
+    }else{
+        return messageError(res,300,'No sizes');
+    }
+});//Each size of each modelBoot
 
 function getModelBootQuantity(req,res){
     let modelId = req.params.modelId;
@@ -519,7 +554,8 @@ async function getImageFile(req,res){
                 
                 res.sendFile(path.resolve(pathFile));
             }else{
-                return messageError(res, 300, 'No existe la imagen');
+                res.sendFile(path.resolve('./uploads/models/default/imageDefault.jpg'));
+                //return messageError(res, 300, 'No existe la imagen');
             }
         });
     }catch (err){
