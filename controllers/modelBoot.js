@@ -224,9 +224,24 @@ async function uploadImages(req,res){
         let parseArrayReqFiles = Object.values(reqFiles)//Object.values(). El método Object.values() devuelve un array con los valores correspondientes a las propiedades enumerables de un objeto.
 
         for(let file of parseArrayReqFiles){
-            console.log(file);
+            //console.log('file');
+            //console.log(file);
+            let keyZeroOfFile = file[Object.keys(file)[0]];
+
+            //console.log(Array.isArray(keyZeroOfFile));
+            let file_path = "";
+
+            if(Array.isArray(keyZeroOfFile)){
+                file_path = keyZeroOfFile[0].path;
+
+                //console.log(keyZeroOfFile);
+            }else{
+                file_path = keyZeroOfFile.path; 
+
+                //console.log(keyZeroOfFile);
+            }
             //Conseguir el nombre y la extensión del archivo
-            let file_path = file[Object.keys(file)[0]].path;
+            
             
             //let file_path = file.path;                //Changed due different Organization
             let file_split = file_path.split('\\');
@@ -234,6 +249,49 @@ async function uploadImages(req,res){
             // --->   var file_split = file_path.split('/');
             //Dateiname
             file_name = file_split[2];
+            /*
+            file
+            {
+                jpg: {
+                    fieldName: 'AMLO.jpg',
+                    originalFilename: 'AMLO.jpg',
+                    path: 'uploads\\models\\tK1ce41fqLItdMgy4dAhB5tf.jpg',
+                    headers: {
+                    'content-disposition': 'form-data; name="AMLO.jpg"; filename="AMLO.jpg"',
+                    'content-type': 'image/jpeg'
+                    },
+                    size: 21180,
+                    name: 'AMLO.jpg',
+                    type: 'image/jpeg'
+                }
+            }
+            file with same Target
+            {
+            jpg: [
+                {
+                fieldName: 'Ackerman.jpg',
+                originalFilename: 'Ackerman.jpg',
+                path: 'uploads\\models\\wtHFPh2H34j0Fl6pXrtqM9Iq.jpg',
+                headers: [Object],
+                size: 4155,
+                name: 'Ackerman.jpg',
+                type: 'image/jpeg'
+                },
+                {
+                fieldName: 'Ackerman.jpg',
+                originalFilename: 'Ackerman.jpg',
+                path: 'uploads\\models\\PJ83u-gBA3Vp-ZXA3RXlJ2tt.jpg',
+                headers: [Object],
+                size: 4155,
+                name: 'Ackerman.jpg',
+                type: 'image/jpeg'
+                }
+            ]
+            }
+
+            
+
+            */
 
             //Extensión del archivo
             let ext_split = file_name.split('\.');
@@ -285,7 +343,8 @@ async function uploadImages(req,res){
 
 async function deleteUpload(req,res) {
     try {   
-       let imageName = req.params.image;
+        console.log('delete');
+        let imageName = req.params.image;
         let modelId = req.params.modelId;
         let file_path = './uploads/models/' + imageName;
         const modelBoot = await ModelBoot.findById(modelId);
@@ -373,6 +432,7 @@ async function deleteModelBoot(req,res){
 const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoot:modelId},(err,sizes) => {
 
     if(err) return messageError(res,500,'Server error');
+    //console.log(sizes);
     if(sizes.length > 0){
         functionCallback(sizes);
     }else{
@@ -382,9 +442,10 @@ const findModelSizes = (res,modelId,functionCallback) => SizeBoot.find({modelBoo
 
 function getModelBootQuantity(req,res){
     let modelId = req.params.modelId;
+    //console.log(modelId);
     ModelBoot.findById(modelId,(err,modelBoot)=> {
         if(err) return messageError(res,500,'Server error');
-
+        //console.log(modelBoot);
         findModelSizes(res, modelId, (sizes) => {
         
             return res.status(200).send({sizes,modelBoot});
