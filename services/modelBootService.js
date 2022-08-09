@@ -50,9 +50,9 @@ const service ={
         try{           
             let arraySizesStored = [];
             await service.iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
-
-                let intParsed = isNaN(body[keyElement]) ? 0:parseInt(body[keyElement]);
-
+                console.log(body[keyElement]);
+                console.log(isNaN(body[keyElement]));
+                let intParsed = isNaN(body[keyElement]) || (body[keyElement])==""  ? 0:parseInt(body[keyElement]);
                 let newQuantityAdd = parseInt(sizeElement.quantity) + intParsed;
                 let newQuantitySubtract = parseInt(sizeElement.quantity) - intParsed;
                 console.log(intParsed);
