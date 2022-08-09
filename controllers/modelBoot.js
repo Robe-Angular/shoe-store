@@ -180,7 +180,7 @@ async function uploadImages(req,res){
     let reqFiles = req.files;
     let arrayUnlinked = [];
     let arrayFiles = [];
-    console.log(reqFiles);
+    //console.log(reqFiles);
     
     try { 
         /*       
@@ -584,21 +584,30 @@ async function getModelsByParams(req,res){
 }
 
 async function addModelBoot(req,res){
-    let modelId = req.params.modelId;
-    let body = req.body;
-    let sizesStored = await addOrSubtractByBodyModelBoot(modelId,body,true);
-    return res.status(200).send({
-        sizesStored
-    });
+    try{
+        let modelId = req.params.modelId;
+        let body = req.body;
+        let sizesStored = await addOrSubtractByBodyModelBoot(modelId,body,true);
+        return res.status(200).send({
+            sizesStored
+        });
+    }catch{
+        return messageError(res,300,'Server error');
+    }
+    
 }
 
 async function subtractModelBoot(req,res){
-    let modelId = req.params.modelId;
-    let body = req.body;
-    let arraysStored = await addOrSubtractByBodyModelBoot(modelId,body,false);
-    return res.status(200).send({
-        arraysStored
-    });
+    try{
+        let modelId = req.params.modelId;
+        let body = req.body;
+        let sizesStored = await addOrSubtractByBodyModelBoot(modelId,body,false);
+        return res.status(200).send({
+            sizesStored
+        });
+    }catch{
+        return messageError(res,300,'Server error');
+    }
 }
 
 async function getImageFile(req,res){

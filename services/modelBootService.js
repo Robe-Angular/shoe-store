@@ -50,8 +50,12 @@ const service ={
         try{           
             let arraySizesStored = [];
             await service.iterateOverBodyValidSizes(modelId,body, async (sizeElement,keyElement) => {
-                let newQuantityAdd = parseInt(sizeElement.quantity) + parseInt(body[keyElement]);
-                let newQuantitySubtract = parseInt(sizeElement.quantity) - parseInt(body[keyElement]);
+
+                let intParsed = isNaN(body[keyElement]) ? 0:parseInt(body[keyElement]);
+
+                let newQuantityAdd = parseInt(sizeElement.quantity) + intParsed;
+                let newQuantitySubtract = parseInt(sizeElement.quantity) - intParsed;
+                console.log(intParsed);
                 let newQuantity = addOrSubtract ? newQuantityAdd : newQuantitySubtract;
                 let sizeElementId = sizeElement._id;
                 const sizeUpdated = await SizeBoot.findByIdAndUpdate(sizeElementId,{quantity:newQuantity},{new:true});
