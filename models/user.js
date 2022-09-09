@@ -9,7 +9,6 @@ var UserSchema = Schema({
     password: {type: String, default:''},
     role: {type: String, default:''},
     emailConfirmed: {type: Boolean, default:false},
-    confirmationCode: {type: String, default: ''},
     telephone: {type: String, default:''},
     createdAt:{type: Date, default: Date.now}
 });

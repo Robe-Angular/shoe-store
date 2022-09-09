@@ -1,5 +1,6 @@
 var bcrypt = require('bcryptjs');
 var dotenv = require('dotenv').config();
+const moment = require('moment');
 const nodemailer = require('nodemailer');
 const hiddenUser = process.env.EMAIL_DOMAIN;
 const hiddenPassword = process.env.EMAIL_API_KEY;
@@ -8,11 +9,13 @@ var jwt = require('../services/jwt');
 var User = require('../models/user');
 var ConfirmationUpdateEmail = require('../models/confirmationUpdateEmail');
 var RecoverPassword = require('../models/recoverPassword');
+var ConfirmationCode = require('../models/confirmationCode');
 
 const {messageError,regexLowerCase} = require('../services/constService');
 
 const {newTransport, sendConfirmationEmail, sendConfirmationEmailOnUpdating, sendResetEmail} = require('../services/emailService');
 const confirmationUpdateEmail = require('../models/confirmationUpdateEmail');
+const { now } = require('moment');
 
 const g_f_createCode = () => {
     const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -87,15 +90,20 @@ function saveUser(req,res){
                 user.password = hash;
                 
                 //Confirmación de email               
-                let confirmationCode = g_f_createCode();
+                let plainConfirmationCode = g_f_createCode();
 
-                bcrypt.hash(confirmationCode,roundHashVerification,(err,encryptedCode) => {
-                    user.confirmationCode = encryptedCode;
+                bcrypt.hash(plainConfirmationCode,roundHashVerification,(err,encryptedCode) => {
+                    if(err) return messageError(res, 500, 'Error at hashing encryptedCode')
+                    let confirmationCode = new ConfirmationCode();
+                    confirmationCode.confirmationCode = encryptedCode;
                     user.save((err, userStored) => {
                         if(err) return messageError(res, 500, 'Error at saving user')
                         if(userStored){    
+                            confirmationCode.user = userStored._id;
                             userStored.password = undefined;
-                                sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, confirmationCode,(err,info) => {
+                            confirmationCode.save((err,confirmationCodeSaved) => {
+                                if(err) return messageError(res, 500, 'Error at saving confirmationCode');
+                                sendConfirmationEmail(transport,hiddenUser,userStored.name, userStored.email, plainConfirmationCode,(err,info) => {
                                     if(err){
                                         console.log(err);
                                         return res.status(500).send({
@@ -109,6 +117,7 @@ function saveUser(req,res){
                                         });
                                     }
                                 });           
+                            });
                         }
                     });                
                 });
@@ -123,23 +132,49 @@ async function tryConfirmationEmail(req, res){
         const roundHashVerification = 10;
         var params = req.body;
         var user = new User();
-        let confirmationCode = g_f_createCode();
-        bcrypt.hash(confirmationCode,roundHashVerification,async (err,encryptedCode) => {
+        
+        let plainConfirmationCode = g_f_createCode();
+        bcrypt.hash(plainConfirmationCode,roundHashVerification,async (err,encryptedCode) => {
             try{
-                let userMatch = await User.findOneAndUpdate({email:params.email},{confirmationCode:encryptedCode},{new:true});
+                if (err) return messageError(res,300,'encrypting failed');
+                let userMatch = await User.findOne({email:params.email},'-password',{new:true});
                 if(!userMatch) return messageError(res,300,'No user found');
-                userMatch.password = undefined;
-                sendConfirmationEmail(transport,hiddenUser,userMatch.name, userMatch.email, confirmationCode, (err,info) => {
-                    if(err){
-                        console.log(err);                                        
-                        return messageError(res,500,'Error sending email');
-                    }else{
-                        return res.status(200).send({
-                            userMatch
-                        });   
-                    }
-                });                                    
+                let userId = userMatch._id;
+                let confirmationCodeMatch = await ConfirmationCode.findOne({user:userId});
+
+                const sendEmail = (confirmationCodeObject) => {
+                    sendConfirmationEmail(transport,hiddenUser,userMatch.name, userMatch.email, plainConfirmationCode, (err,info) => {
+                        if(err){
+                            console.log(err);                                        
+                            return messageError(res,500,'Error sending email');
+                        }else{
+                            return res.status(200).send({
+                                userMatch
+                            });   
+                        }
+                    });
+                }
+                const createNewConfirmationCode = () => {
+                    let newConfirmationCode = new ConfirmationCode();
+                    newConfirmationCode.user = userMatch._id;
+                    newConfirmationCode.confirmationCode = encryptedCode;
+                    newConfirmationCode.save();
+                    sendEmail(newConfirmationCode);
+                }
+                
+
+                if(!confirmationCodeMatch){
+                    createNewConfirmationCode();
+                }else{
+                    checkTime(res,2,confirmationCodeMatch,async () => {
+                        userMatch.password = undefined;
+                        await ConfirmationCode.deleteOne({user:userMatch});
+                        createNewConfirmationCode();
+                    });
+                }
+                        
             }catch(err){
+                console.log(err);
                 return messageError(res,500,'Server Error')
             }
         });
@@ -151,6 +186,21 @@ async function tryConfirmationEmail(req, res){
     }
 }//Send confirmationEmail again
 
+const checkTime = (res,minutes,objectWithDate, callback) => {
+    let dateNow = new Date();
+    let dateOfObject = objectWithDate.createdAt;
+    let dateTwoMinutesAfter = new Date(dateOfObject);
+    dateTwoMinutesAfter.setMinutes(dateOfObject.getMinutes() + minutes);
+    console.log(dateNow);
+    console.log(dateOfObject);
+    if(dateNow < dateTwoMinutesAfter){
+        let secondsToUnlock = Math.round((dateTwoMinutesAfter - dateNow)/1000);
+        return (messageError(res,300,"Send again after " + secondsToUnlock + " seconds"));
+    }else{
+        callback();
+    }
+}
+
 function verifyUser(req, res){
     let emailParams = req.body.email;
     let codeVerificationParams = req.body.confirmationCode;
@@ -158,30 +208,36 @@ function verifyUser(req, res){
     User.findOne({email:regexQueryEmail}, (err,user) => {
         if(err) return messageError(res, 500, 'Request error');
         if(user){
-            bcrypt.compare(codeVerificationParams, user.confirmationCode, (err, match) => {
+            let userId = user._id;
+            ConfirmationCode.findOne({user:userId},(err,confirmationCodeMatch) => {
                 
-                if(err) return messageError(res,500,'Server Error');
-                
-                user.emailConfirmed = match;
-                user.confirmationCode = '';
-                if(user.emailConfirmed){
-                    user.save(err => {
-                        if(err){
-                            console.log(err);
-                            return messageError(res, 500, 'Request error');
-                        }else{
-                            if(user.password){
-                                user.password = undefined;
-                            }                            
-                            return res.status(200).send({
-                                user
-                            });
-                        }
-                    });
-                }else{
-                    return messageError(res,300,'No match Code');
-                }
+                bcrypt.compare(codeVerificationParams, confirmationCodeMatch.confirmationCode, (err, match) => {
+            
+                    if(err) return messageError(res,500,'Server Error');
+                    
+                    user.emailConfirmed = match;
+                    if(user.emailConfirmed){
+                        user.save(err => {
+                            ConfirmationCode.findOneAndDelete({user:userId});
+                            if(err){
+                                console.log(err);
+                                return messageError(res, 500, 'Request error');
+                            }else{
+                                if(user.password){
+                                    user.password = undefined;
+                                }                            
+                                return res.status(200).send({
+                                    user
+                                });
+                                
+                            }
+                        });
+                    }else{
+                        return messageError(res,300,'No match Code');
+                    }
+                });  
             });
+            
         }else{
             return messageError(res, 404, 'User Not Found');
         }        
@@ -242,6 +298,7 @@ function recoverPasswordEmail(req,res){
         recoverPassword.user = recoverUser._id;
         let resetCode = g_f_createCode();
         
+        
         bcrypt.hash(resetCode,roundHashPasswordCode,(err,hash) => {
             if(err) return messageError(res,500,'Request error');
             if(hash){
@@ -271,33 +328,41 @@ function recoverPasswordEmail(req,res){
             return messageError(res,300,'If you have any account the email was sended')
         }
     });
-    
-    RecoverPassword.find().populate('user').exec((err,recoversPassword) => {
-        if(err) return messageError(res,500, 'Request error');    
-        
-        if(recoversPassword){
-            let recoverUserExists = false;
-            let recoverId = '';
-            let recoverUser = new User();
-            recoversPassword.forEach(element => {
-                if(element.user.email == userEmail){
-                    recoverUserExists = true;
-                    recoverId = element._id;
-                    recoverUser = element.user;
-                }
-            });
-            if(recoverUserExists){
-                RecoverPassword.find({'_id':recoverId}).deleteOne((err,removed) => {
-                    if(err) return messageError(res,500,'Request error');                    
-                    if(removed) setRecoverPassword(res,recoverPassword,recoverUser);
-                });
+    User.findOne({'email':regexLowerCase(userEmail)},(err,recoverUser)=>{
+        if(err) return messageError(res,500,'Request error');                
+        if(!recoverUser) return messageError(res,400,'No user found');
+        RecoverPassword.findOne({"user":recoverUser._id},(err,recoverPasswordQuery) => {
+            if(err) return messageError(res,500, 'Request error');                
+            let recoverId = recoverPassword._id
+            if(recoverPasswordQuery){
+                if(err) return messageError(res,500,'Request error'); 
+                
+                /*let dateNow = new Date();
+                let recoverDate = recoverPasswordQuery.createdAt;
+                let dateTwoMinutesAfter = new Date(recoverDate);
+                dateTwoMinutesAfter.setMinutes(recoverDate.getMinutes() + 2);
+                if(dateNow < dateTwoMinutesAfter){
+                    let secondsToUnlock = Math.round((dateTwoMinutesAfter - dateNow)/1000);
+                    return (messageError(res,300,"Send again after " + secondsToUnlock + " seconds"));
+                }else{
+                    RecoverPassword.find({'_id':recoverId}).deleteOne((err,removed) => {
+                        
+                            setRecoverPassword(res,recoverPasswordQuery,recoverUser);                        
+                        
+                    });
+                }*/
+                checkTime(res,2,recoverPasswordQuery,() => {
+                    RecoverPassword.find({'_id':recoverId}).deleteOne((err,removed) => {
+                        setRecoverPassword(res,recoverPasswordQuery,recoverUser);                         
+                    });
+                })
             }else{
                 newRecover();
             }
-        }else{                
-            newRecover();
-        }
+        
+        });
     });
+    
 }
 
 function recoverPasswordSubmit(req,res){

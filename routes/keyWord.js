@@ -14,4 +14,5 @@ api.delete('/deleteKeyWord/:keyWordId', [md_auth.ensureAuth, md_role.hasRole(['R
 api.put('/saveKeyWordOnModelBoot/:keyWordId/:modelBootId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.saveKeyWordOnModelBoot);
 api.delete('/deleteKeyWordOnModelBoot/:keyWordId/:modelBootId', [md_auth.ensureAuth, md_role.hasRole(['ROLE_ADMIN'])] ,keyWordController.deleteKeyWordOnModelBoot);
 
+
 module.exports = api;
